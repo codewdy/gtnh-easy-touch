@@ -5,9 +5,9 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 
-/** Merges independent input sources. It knows nothing about mouse swapping or shortcut timing. */
+/** Merges mouse-key overrides and queues clicks independently of Minecraft's input API. */
 public final class KeyStateMerger {
-    public enum Key { ATTACK, USE, SNEAK }
+    public enum Key { ATTACK, USE }
 
     public interface Port {
         boolean physicalDown(Key key);
@@ -16,7 +16,7 @@ public final class KeyStateMerger {
         void clearClicks(Key key);
     }
 
-    private enum Request { HOLD, OVERRIDE_DOWN, OVERRIDE_UP }
+    private enum Request { OVERRIDE_DOWN, OVERRIDE_UP }
 
     private final Port port;
     private final List<Source> sources = new ArrayList<Source>();
@@ -33,16 +33,17 @@ public final class KeyStateMerger {
     /** Apply held states before clicks so vanilla sees the corresponding key as held during use. */
     public void sync(boolean inWorld) {
         for (Key key : Key.values()) {
-            boolean requested = false, held = false, override = false;
+            boolean requested = false, held = false;
             for (Source source : sources) {
                 Request request = source.requests.get(key);
                 if (request == null) continue;
                 requested = true;
-                held |= request != Request.OVERRIDE_UP;
-                override |= request != Request.HOLD;
+                held |= request == Request.OVERRIDE_DOWN;
             }
-            if (requested || controlled.contains(key)) {
-                port.setDown(key, inWorld && (held || (!override && port.physicalDown(key))));
+            if (requested) {
+                port.setDown(key, inWorld && held);
+            } else if (controlled.contains(key)) {
+                port.setDown(key, inWorld && port.physicalDown(key));
             }
             if (requested) controlled.add(key);
             else controlled.remove(key);
@@ -72,12 +73,6 @@ public final class KeyStateMerger {
         private final EnumMap<Key, Integer> clicks = new EnumMap<Key, Integer>(Key.class);
 
         private Source() { }
-
-        /** Add a held key without suppressing the user's physical key or other sources. */
-        public void hold(Key key, boolean down) {
-            if (down) requests.put(key, Request.HOLD);
-            else requests.remove(key);
-        }
 
         /** Replace the physical key's state; other sources may still independently hold this key. */
         public void override(Key key, boolean down) {

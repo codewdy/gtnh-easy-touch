@@ -5,7 +5,7 @@ import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
 import org.lwjgl.opengl.Display;
 
-/** Minecraft environment and key I/O shared by input features, with no feature-specific policy. */
+/** Minecraft environment and attack/use key I/O, independent of mouse mapping policy. */
 public final class MinecraftInput implements KeyStateMerger.Port {
     public final Minecraft mc;
 
@@ -20,7 +20,6 @@ public final class MinecraftInput implements KeyStateMerger.Port {
         switch (key) {
             case ATTACK: return mc.gameSettings.keyBindAttack;
             case USE: return mc.gameSettings.keyBindUseItem;
-            case SNEAK: return mc.gameSettings.keyBindSneak;
             default: throw new AssertionError(key);
         }
     }

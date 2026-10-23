@@ -2,20 +2,17 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.3.0 使用独立 matcher 实现目标白名单：只有准星命中名单中的对象才交换左右键；其他目标、空气和未识别对象均保持左键攻击/挖掘、右键使用/放置。手持物品本身不触发交换。**
+**0.3.1 使用独立 matcher 实现目标白名单：只有准星命中名单中的对象才交换左右键；其他目标、空气和未识别对象均保持左键攻击/挖掘、右键使用/放置。手持物品本身不触发交换。**
 
 ## 安装与使用
 
-1. 将 `build/libs/gtnh-easy-touch-0.3.0.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 将 `build/libs/gtnh-easy-touch-0.3.1.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
 3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
-4. 如需一键完成潜行交互，为同一分类中的“潜行＋原生右键（按住）”绑定另一个空闲键，让 UU 的按钮只发送这个键。点按执行一次潜行右键，按住则保持潜行和使用；松开后结束。该快捷键默认未绑定，也可在关闭智能交换时使用。
 
 智能模式默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后恢复原版操作。背包、机器、NEI、聊天等 GUI 内始终保持正常鼠标语义。修改攻击/使用的鼠标绑定后，模组停止接管。
 
 玩家处于潜行状态（默认按住 Shift）时，新开始的鼠标按压使用原版映射：左键攻击/挖掘，右键使用/放置，即使目标在白名单中也不交换；准星旁的“交互”提示同时隐藏。统一依据 `player.isSneaking()` 判断。已经开始的长按仍保持原映射，需左右键全部松开后才按新的潜行状态判断。
-
-组合快捷键在 MC 内先按住潜行，等玩家完成一次正常的潜行更新和同步，下一 tick 才触发原版“使用物品/放置”，通常增加约 50 ms 的准备时间。它绕过白名单交换，支持短按和长按，不需要 UU 同时发送 Shift 和右键。释放时保留用户实际按住的潜行键及原有使用操作；打开 GUI、失焦、死亡、切换世界或智能模式会清理组合状态，再次使用前需松开快捷键。快捷键通过 Minecraft 控制菜单保存，无额外配置文件项。
 
 ## 默认白名单
 
@@ -78,18 +75,16 @@ matchers {
 
 ## 输入功能的代码划分
 
-[ClientInput](src/main/java/io/github/wdy/easytouch/ClientInput.java) 只负责注册、事件转发和 GUI/失焦/世界切换等共同清理时机。具体功能分别放在 [input/](src/main/java/io/github/wdy/easytouch/input/)：
+[ClientInput](src/main/java/io/github/wdy/easytouch/ClientInput.java) 只负责注册、事件转发和 GUI/失焦/世界切换等共同清理时机。鼠标输入逻辑放在 [input/](src/main/java/io/github/wdy/easytouch/input/)：
 
 | 文件 | 职责 |
 | --- | --- |
 | [SmartMouseInput.java](src/main/java/io/github/wdy/easytouch/input/SmartMouseInput.java) | smart 鼠标交换、模式快捷键和准星提示 |
 | [MouseGesture.java](src/main/java/io/github/wdy/easytouch/input/MouseGesture.java) | 普通鼠标按压、双键重叠和映射锁定 |
-| [SneakUseInput.java](src/main/java/io/github/wdy/easytouch/input/SneakUseInput.java) | 潜行＋原生右键的快捷键、输入读取和玩家同步时序 |
-| [SneakUseGesture.java](src/main/java/io/github/wdy/easytouch/input/SneakUseGesture.java) | 组合键的等待、点按、长按和取消状态 |
-| [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 独立输入来源的按键合并、一次点击和队列清理 |
+| [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 攻击/使用按键的状态合并、一次点击和队列清理 |
 | [MinecraftInput.java](src/main/java/io/github/wdy/easytouch/input/MinecraftInput.java) | Minecraft 环境判断和底层按键读写 |
 
-两套功能不引用对方的类或状态，各自通过独立的 `Source` 提交按键请求。smart 可以替换物理鼠标映射，组合快捷键只追加潜行和使用；共享层保证一个来源释放时，另一个来源或用户实际按住的按键仍然有效。切换 smart 模式时仍由入口统一清理正在进行的输入。
+smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由底层统一写入 Minecraft。结束接管时恢复当前物理按键状态，进入 GUI 或切换模式时由入口清理正在进行的输入和待执行点击。
 
 ## 按 matcher review 和扩展
 
@@ -171,7 +166,7 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 
 `./gradlew test` 覆盖长按锁定、双键重叠、各 matcher 的目标判断、宠物驯服条件、旧配置迁移与空列表持久化、GT 宿主和 AE2 部件选择。扩展测试验证新增命中面/高度条件无需修改核心代码；合并测试验证 100 个简单 matcher 在命中和未命中时均只读取一次所需的目标字段，并覆盖嵌套组合、独立禁用、后续注册和合并后的驯服优先级。可选模组接口测试使用测试替身，不代表已在完整整合包中验证兼容性。
 
-组合快捷键的状态机测试覆盖先潜行后使用、短按保留一次交互、长按与释放、潜行失效时暂停使用、取消后必须松键，以及无法进入潜行时超时清理。共享按键层另有交叉使用测试，验证两套功能的释放互不干扰、物理按键恢复、smart 映射与组合键并行，以及 GUI 边界清除待执行点击。
+按键层测试覆盖交换后不重复触发原生右键、退出接管时恢复当前物理按键，以及进入 GUI 时清除待执行点击和按住状态。
 
 实际 GTNH / UU 环境仍需实测：
 
@@ -181,4 +176,3 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 - 同一格 AE 线缆上的终端面板交换，指向线缆本身不交换。
 - 拿着食物、桶、建筑方块或弓对准空气/普通方块仍使用原版左右键。
 - 背包/机器/NEI 的拿取、拆分、拖动，以及失焦、死亡、退出世界后的输入清理。
-- 组合快捷键短按在容器旁潜行放置，长按连续使用，松开恢复；实际 Shift 或普通使用键仍按住时不被提前释放；打开 GUI 或失焦后不残留组合按键。
