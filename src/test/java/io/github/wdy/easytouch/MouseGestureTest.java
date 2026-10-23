@@ -1,12 +1,13 @@
 package io.github.wdy.easytouch;
 
+import io.github.wdy.easytouch.input.MouseGesture;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class GestureTest {
+public class MouseGestureTest {
     @Test
     public void holdsMappingWhenAimChangesAndButtonsOverlap() {
-        Gesture gesture = new Gesture();
+        MouseGesture gesture = new MouseGesture();
         assertEquals(Action.USE, gesture.press(0, Action.USE));
         assertEquals(Action.ATTACK, gesture.press(1, Action.ATTACK));
         assertTrue(gesture.holds(Action.USE));
@@ -21,7 +22,7 @@ public class GestureTest {
 
     @Test
     public void secondaryFirstStillUsesOppositeAction() {
-        Gesture gesture = new Gesture();
+        MouseGesture gesture = new MouseGesture();
         assertEquals(Action.ATTACK, gesture.press(1, Action.USE));
         assertEquals(Action.USE, gesture.press(0, Action.ATTACK));
         gesture.reset();
@@ -32,7 +33,7 @@ public class GestureTest {
 
     @Test
     public void duplicatePressAndReleaseDoNotRetarget() {
-        Gesture gesture = new Gesture();
+        MouseGesture gesture = new MouseGesture();
         gesture.press(0, Action.ATTACK);
         assertEquals(Action.ATTACK, gesture.press(0, Action.USE));
         gesture.release(1);

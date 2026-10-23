@@ -1,5 +1,6 @@
 key.categories.easytouch=GTNH Easy Touch
 key.easytouch.toggle=Toggle adaptive mouse buttons
+key.easytouch.sneak_use=Sneak + native use (hold)
 easytouch.enabled=Easy Touch: ON
 easytouch.disabled=Easy Touch: OFF (vanilla controls)
 easytouch.hud=Interact

@@ -1,7 +1,9 @@
-package io.github.wdy.easytouch;
+package io.github.wdy.easytouch.input;
+
+import io.github.wdy.easytouch.Action;
 
 /** One mapping for the entire gesture, including overlapping buttons. */
-public final class Gesture {
+public final class MouseGesture {
     private final boolean[] down = new boolean[2];
     private Action primary;
 
