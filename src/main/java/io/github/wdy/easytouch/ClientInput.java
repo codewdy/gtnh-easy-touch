@@ -64,7 +64,8 @@ public final class ClientInput {
         event.setCanceled(true);
         if (event.buttonstate) {
             if (!gesture.isDown(event.button)) {
-                Action action = gesture.press(event.button, resolver.resolve(mc));
+                Action primary = mc.thePlayer.isSneaking() ? Action.ATTACK : resolver.resolve(mc);
+                Action action = gesture.press(event.button, primary);
                 KeyBinding.onTick(binding(action).getKeyCode());
             }
         } else {
@@ -129,6 +130,7 @@ public final class ClientInput {
     @SubscribeEvent
     public void hud(RenderGameOverlayEvent.Text event) {
         if (!config.enabled || !config.hud || !inWorld() || mc.gameSettings.hideGUI || !defaultButtons()) return;
+        if (mc.thePlayer.isSneaking()) return;
         // The hint follows the current target; an active gesture still keeps its locked button mapping.
         if (resolver.resolve(mc) != Action.USE) return;
         String text = I18n.format("easytouch.hud");
