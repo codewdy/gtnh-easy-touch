@@ -1,0 +1,10 @@
+[
+  {
+    "modid": "gtnheasytouch",
+    "name": "GTNH Easy Touch",
+    "description": "Whitelist-based mouse button swapping for touchscreen streaming in GTNH.",
+    "version": "${version}",
+    "mcversion": "1.7.10",
+    "authorList": ["wdy"]
+  }
+]
