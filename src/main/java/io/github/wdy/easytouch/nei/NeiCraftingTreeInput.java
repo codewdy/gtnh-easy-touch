@@ -3,18 +3,22 @@ package io.github.wdy.easytouch.nei;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import codechicken.nei.ItemPanels;
 import codechicken.nei.GuiNEIButton;
 import codechicken.nei.NEICPH;
 import codechicken.nei.NEIClientConfig;
+import codechicken.nei.NEIClientUtils;
 import codechicken.nei.bookmark.BookmarkGrid;
 import codechicken.nei.bookmark.BookmarkGroup;
+import codechicken.nei.bookmark.BookmarkItem;
 import codechicken.nei.bookmark.tree.GuiCraftingTree;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.guihook.IContainerInputHandler;
 import codechicken.nei.guihook.IContainerTooltipHandler;
 import codechicken.nei.recipe.AutoCraftingManager;
 import codechicken.nei.recipe.chain.RecipeChainMath;
+import codechicken.nei.util.NEIMouseUtils;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.FMLLog;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -56,6 +60,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     private final Field groupId;
     private final Field searchField;
     private final Field previousScreen;
+    private final NeiTreeQuantityScroll quantityScroll;
     private boolean failed;
     private PendingCraft pending;
     private PendingDeletion pendingDeletion;
@@ -71,6 +76,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         groupId = field("groupId");
         searchField = field("searchField");
         previousScreen = field("prevGui");
+        quantityScroll = new NeiTreeQuantityScroll();
     }
 
     private static Field field(String name) throws ReflectiveOperationException {
@@ -205,6 +211,25 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             fail(error);
             return "unavailable";
         }
+    }
+
+    @Override
+    public Map<String, String> handleHotkeys(GuiContainer gui, int x, int y, Map<String, String> hotkeys) {
+        if (!isTree(gui)) return hotkeys;
+        try {
+            if (quantityScroll.outputUnderMouse((GuiCraftingTree) gui) != null) {
+                int wheel = NEIMouseUtils.MOUSE_BTN_NONE + NEIMouseUtils.MOUSE_SCROLL;
+                hotkeys.remove(NEIClientUtils.getKeyName(NEIClientUtils.CTRL_HASH, wheel));
+                hotkeys.remove(NEIClientUtils.getKeyName(NEIClientUtils.CTRL_HASH + NEIClientUtils.ALT_HASH, wheel));
+                hotkeys.put(NEIClientUtils.getKeyName(0, wheel),
+                    I18n.format("nei.bookmark.change_quantity"));
+                hotkeys.put(NEIClientUtils.getKeyName(NEIClientUtils.ALT_HASH, wheel),
+                    I18n.format("nei.bookmark.change_quantity_step"));
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+            fail(error);
+        }
+        return hotkeys;
     }
 
     private boolean isTree(Object screen) {
@@ -493,7 +518,28 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         if (pending != null && gui == pending.target) cancelPending();
     }
     @Override public void onMouseUp(GuiContainer gui, int x, int y, int button) { }
-    @Override public boolean mouseScrolled(GuiContainer gui, int x, int y, int scroll) { return false; }
+    @Override
+    public boolean mouseScrolled(GuiContainer gui, int x, int y, int scroll) {
+        if (scroll == 0 || !isTree(gui)) return false;
+        // Ctrl retains the native path; Shift retains ingredient selection/horizontal scrolling.
+        checkedTree = null;
+        if (NEIClientUtils.controlKey() || NEIClientUtils.shiftKey()) return false;
+        try {
+            GuiCraftingTree tree = (GuiCraftingTree) gui;
+            BookmarkItem item = quantityScroll.outputUnderMouse(tree);
+            if (item == null) return false;
+            BookmarkGrid bookmarks = (BookmarkGrid) grid.get(tree);
+            int selectedGroup = groupId.getInt(tree);
+            if (bookmarks == null || bookmarks.getGroup(selectedGroup) == null) return false;
+            // A quantity edit supersedes a button request holding an older recipe snapshot.
+            cancelPending();
+            quantityScroll.changeAmount(tree, bookmarks, selectedGroup, item, scroll);
+            return true; // Consume the wheel so NEI cannot also scroll/zoom the canvas.
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+            fail(error);
+            return true;
+        }
+    }
     @Override public void onMouseScrolled(GuiContainer gui, int x, int y, int scroll) { }
     @Override public void onMouseDragged(GuiContainer gui, int x, int y, int button, long heldTime) { }
 }
