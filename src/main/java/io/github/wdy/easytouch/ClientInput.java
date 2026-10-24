@@ -3,7 +3,10 @@ package io.github.wdy.easytouch;
 import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.MinecraftInput;
 import io.github.wdy.easytouch.input.SmartMouseInput;
+import io.github.wdy.easytouch.nei.NeiCraftingTreeInput;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.FMLLog;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -13,8 +16,9 @@ import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
+import org.apache.logging.log4j.Level;
 
-/** Event wiring and lifecycle boundaries for adaptive mouse input. */
+/** Client input registration, event wiring and lifecycle boundaries. */
 public final class ClientInput {
     private final MinecraftInput input = new MinecraftInput(Minecraft.getMinecraft());
     private final KeyStateMerger keys = new KeyStateMerger(input);
@@ -29,6 +33,16 @@ public final class ClientInput {
         client.smartMouse.registerKey();
         MinecraftForge.EVENT_BUS.register(client);
         FMLCommonHandler.instance().bus().register(client);
+    }
+
+    public static void installNeiCrafting() {
+        if (!Loader.isModLoaded("NotEnoughItems")) return;
+        try {
+            NeiCraftingTreeInput.install();
+        } catch (RuntimeException | LinkageError error) {
+            // Loading the optional adapter itself can fail before its install() body is entered.
+            FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] Cannot load NEI crafting tree controls.");
+        }
     }
 
     private void cancelInputs() {
