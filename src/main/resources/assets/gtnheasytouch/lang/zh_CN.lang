@@ -20,3 +20,4 @@ easytouch.craftTree.noChain=当前配方树没有可执行的合成链。
 easytouch.craftTree.heldItem=请先放下鼠标上拿着的物品，再开始合成。
 easytouch.craftTree.syncTimeout=等待工作台物品同步超时，未开始合成；请重新打开工作台后重试。
 easytouch.craftTree.unavailable=配方树合成按钮与当前 NEI 不兼容，已停用此功能；详情见日志。
+easytouch.craftTree.favoriteShortcut=根据收藏配方打开合成树

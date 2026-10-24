@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import codechicken.nei.ItemPanels;
+import codechicken.nei.KeyManager;
 import codechicken.nei.GuiNEIButton;
 import codechicken.nei.NEICPH;
 import codechicken.nei.NEIClientConfig;
@@ -215,8 +216,13 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
 
     @Override
     public Map<String, String> handleHotkeys(GuiContainer gui, int x, int y, Map<String, String> hotkeys) {
-        if (!isTree(gui)) return hotkeys;
+        if (failed) return hotkeys;
         try {
+            if (NeiFavoriteTreeShortcut.favoriteUnderMouse(gui) != null) {
+                hotkeys.put(KeyManager.getKeyName(NeiFavoriteTreeShortcut.KEY, NEIClientUtils.SHIFT_HASH),
+                    I18n.format("easytouch.craftTree.favoriteShortcut"));
+            }
+            if (!isTree(gui)) return hotkeys;
             if (quantityScroll.outputUnderMouse((GuiCraftingTree) gui) != null) {
                 int wheel = NEIMouseUtils.MOUSE_BTN_NONE + NEIMouseUtils.MOUSE_SCROLL;
                 hotkeys.remove(NEIClientUtils.getKeyName(NEIClientUtils.CTRL_HASH, wheel));
@@ -511,7 +517,16 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         // Manual input can cancel a pending button action, but never triggers crafting.
         if (pending != null && gui == pending.target) cancelPending();
     }
-    @Override public boolean lastKeyTyped(GuiContainer gui, char keyChar, int keyCode) { return false; }
+    @Override
+    public boolean lastKeyTyped(GuiContainer gui, char keyChar, int keyCode) {
+        if (failed) return false;
+        try {
+            return NeiFavoriteTreeShortcut.open(gui, keyCode);
+        } catch (RuntimeException | LinkageError error) {
+            fail(error);
+            return true;
+        }
+    }
     @Override public boolean mouseClicked(GuiContainer gui, int x, int y, int button) { return false; }
     @Override public void onMouseClicked(GuiContainer gui, int x, int y, int button) {
         // A manual inventory action supersedes a launch that is still waiting for synchronization.

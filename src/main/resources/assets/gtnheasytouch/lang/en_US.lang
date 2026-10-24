@@ -20,3 +20,4 @@ easytouch.craftTree.noChain=This recipe tree has no crafting chain to run.
 easytouch.craftTree.heldItem=Put down the item held by the cursor before starting crafting.
 easytouch.craftTree.syncTimeout=Container synchronization timed out. Crafting did not start; reopen the container and try again.
 easytouch.craftTree.unavailable=The recipe tree crafting buttons are incompatible with this NEI version and have been disabled. See the log.
+easytouch.craftTree.favoriteShortcut=Open crafting tree from favorite recipe
