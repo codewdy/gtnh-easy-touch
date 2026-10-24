@@ -2,19 +2,24 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.8 支持悬停物品按 Shift+T，根据已收藏配方创建合成组并打开配方树。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
+**0.4.9 新增可配置的“打开 NEI 合成树（等效 Shift+T）”快捷键，支持物品、原生配方爱心按钮及已有合成组标题，无需同时按 Shift。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
 
 ## 安装与使用
 
-1. 将 `build/libs/gtnh-easy-touch-0.4.8.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 将 `build/libs/gtnh-easy-touch-0.4.9.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
 3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
+4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
 
 智能模式默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后恢复原版操作。背包、机器、NEI、聊天等 GUI 内始终保持正常鼠标语义。修改攻击/使用的鼠标绑定后，模组停止接管。
 
 玩家处于潜行状态（默认按住 Shift）时，新开始的鼠标按压使用原版映射：左键攻击/挖掘，右键使用/放置，即使目标在白名单中也不交换；准星旁的“交互”提示同时隐藏。统一依据 `player.isSneaking()` 判断。已经开始的长按仍保持原映射，需左右键全部松开后才按新的潜行状态判断。
 
 ## 配方树合成按钮
+
+配置“打开 NEI 合成树（等效 Shift+T）”后，只按绑定的键即可执行对应动作：悬停物品时使用收藏配方建树；悬停 NEI 配方的爱心按钮时使用当前配方建树，即使尚未收藏该配方；悬停已有合成组标题时打开该组，不额外创建副本。按钮定位沿用当前配方组件及其滚动偏移，支持当前显示的配方变体。适用位置的操作提示同时列出新按键。
+
+新按键独立于 NEI 的 T 绑定，在背包/容器和 NEI 界面内生效；原有 Shift+T 保留。输入在 NEI 末阶段处理，搜索框文字输入优先，按住不重复新建分组；仅打开配方树，不直接开始自动合成。请选择未被其他操作占用的键盘键。
 
 悬停书签、右侧 NEI 物品列表、中间配方的产物/材料或背包槽位中的物品，按 **Shift+T**，即可使用该物品的收藏配方创建合成组并打开配方树。优先使用爱心手动收藏的配方，其次使用 NEI 自动收藏的配方；只有物品收藏标记、没有配方或原配方已失效时不新增合成组。匹配遵循 NEI 自己的物品、元数据、NBT 和流体规则。
 
@@ -114,7 +119,7 @@ smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由�
 
 [NeiCraftingTreeInput](src/main/java/io/github/wdy/easytouch/nei/NeiCraftingTreeInput.java) 仅在客户端加载 NEI 时注册，负责配方树按钮、滚轮事件、可合成状态检查和返回原容器启动 NEI 自动合成。[NeiTreeQuantityScroll](src/main/java/io/github/wdy/easytouch/nei/NeiTreeQuantityScroll.java) 复用原生画布命中、数量规则和刷新方法，使用实时鼠标坐标适配 GUI 缩放及画布缩放、平移，不模拟 Ctrl 按键。
 
-[NeiFavoriteTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiFavoriteTreeShortcut.java) 在 NEI 的末阶段按键回调中读取悬停物品及收藏配方，调用原生 `GuiFavoriteButton.saveRecipeInBookmark()` 并打开新组；不注册额外快捷键，不模拟鼠标位置，也不复制 NEI 的递归配方算法。
+[NeiFavoriteTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiFavoriteTreeShortcut.java) 在 NEI 的末阶段按键回调中读取悬停物品及收藏配方，调用原生 `GuiFavoriteButton.saveRecipeInBookmark()` 并打开新组。[NeiTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiTreeShortcut.java) 注册独立的单键入口，分别复用当前配方爱心按钮、已有组和物品收藏的动作；无需伪造全局 Shift/T 状态，不复制 NEI 的递归配方算法。
 
 ## 按 matcher review 和扩展
 
@@ -210,6 +215,7 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 - 背包/机器/NEI 的拿取、拆分、拖动，以及失焦、死亡、退出世界后的输入清理。
 - 从工作台打开配方树，两个按钮均返回工作台并按分组数量合成，已有成品仍可再合成一批；控制设置中不再出现本模组的配方树合成快捷键。
 - 分别悬停书签、右侧物品列表、配方产物/材料和背包槽位，Shift+T 按收藏配方新建并打开合成树；无配方、只收藏物品、失效配方不新建组。检查手动收藏优先、自动收藏回退、搜索框输入、长按不重复、改绑 NEI 打开合成树按键，以及原生收藏按钮/组标题不会额外创建第二组。
+- 在控制菜单绑定“打开 NEI 合成树（等效 Shift+T）”并重启确认保存；无需 Shift 分别测试收藏物品、未收藏配方的爱心按钮、滚动后的爱心按钮、折叠/展开的合成组标题。组标题只打开原组，按住不重复新建，搜索框仍输入原字符，旧 Shift+T 仍有效。
 - 在目标产物上直接滚轮增减数量，Alt 按倍率调整，Ctrl 原操作不重复执行；材料统计和按钮状态随之更新。检查多个根节点、数量下限、不同 GUI/画布缩放和平移，以及开启免 Ctrl 缩放后目标产物调整数量、空白处仍缩放。Shift 操作、统计面板滚动和外部书签面板保持原行为。
 - 调整 GUI 缩放或窗口大小后，三个像素图标按钮仍依次紧接 Save Image，图标完整显示；未开启自动合成、材料完全不足或从不支持合成的容器进入时两个合成按钮置灰，补充材料后恢复。
 - 工作台中按住“合成”按钮时仍留在树界面，松开后返回工作台；同步完成前不搬动物品。高延迟、点击后移动鼠标、光标已有物品及等待时关闭界面均需验证。

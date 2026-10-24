@@ -4,7 +4,7 @@ import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 
-@Mod(modid = EasyTouch.ID, name = "GTNH Easy Touch", version = "0.4.8",
+@Mod(modid = EasyTouch.ID, name = "GTNH Easy Touch", version = "0.4.9",
     acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*")
 public final class EasyTouch {
     public static final String ID = "gtnheasytouch";

@@ -25,13 +25,7 @@ final class NeiFavoriteTreeShortcut {
     private NeiFavoriteTreeShortcut() { }
 
     static RecipeId favoriteUnderMouse(GuiContainer gui) {
-        Minecraft mc = Minecraft.getMinecraft();
-        // Native recipe buttons can already have opened a tree before the last-key callbacks.
-        // Never act on their old screen, or while a NEI text widget owns the keyboard.
-        if (gui == null || mc.currentScreen != gui || mc.thePlayer == null || mc.theWorld == null
-                || mc.thePlayer.isDead || !Display.isActive() || !NEIClientConfig.isLoaded()
-                || LayoutManager.getInputFocused() != null || ItemPanels.bookmarkPanel == null
-                || ItemPanels.bookmarkPanel.inEditingState()) return null;
+        if (!canUse(gui)) return null;
         ItemStack hovered = GuiContainerManager.getStackMouseOver(gui);
         if (hovered == null) return null;
         // NEI handles metadata/NBT/fluids and prefers manual favorites to generated favorites.
@@ -40,10 +34,24 @@ final class NeiFavoriteTreeShortcut {
         return recipe != null && !FavoriteRecipes.FAVORITE_ITEM.equals(recipe.getHandlerName()) ? recipe : null;
     }
 
+    static boolean canUse(GuiContainer gui) {
+        Minecraft mc = Minecraft.getMinecraft();
+        // Native recipe buttons can already have opened a tree before the last-key callbacks.
+        // Never act on their old screen, or while a NEI text widget owns the keyboard.
+        return gui != null && mc.currentScreen == gui && mc.thePlayer != null && mc.theWorld != null
+            && !mc.thePlayer.isDead && Display.isActive() && NEIClientConfig.isLoaded()
+            && LayoutManager.getInputFocused() == null && ItemPanels.bookmarkPanel != null
+            && !ItemPanels.bookmarkPanel.inEditingState();
+    }
+
     static boolean open(GuiContainer gui, int keyCode) {
         // Follow the user's NEI binding, and react only to that key's own non-repeat event.
         if (keyCode <= Keyboard.KEY_NONE || keyCode != KeyManager.getKeyCode(KEY)
                 || Keyboard.isRepeatEvent() || !KeyManager.isHashDown(KEY, NEIClientUtils.SHIFT_HASH)) return false;
+        return openFavorite(gui);
+    }
+
+    static boolean openFavorite(GuiContainer gui) {
         RecipeId favorite = favoriteUnderMouse(gui);
         if (favorite == null) return false;
         RecipeHandlerRef recipe = RecipeHandlerRef.of(favorite);
@@ -51,7 +59,10 @@ final class NeiFavoriteTreeShortcut {
 
         // Reuse the actual native Shift+T implementation's save operation. It recursively
         // expands favorites, honors NEI's depth/permutation choices, and adds a TODO crafting group.
-        GuiFavoriteButton favoriteButton = new GuiFavoriteButton(recipe, 0, 0);
+        return openRecipe(new GuiFavoriteButton(recipe, 0, 0));
+    }
+
+    static boolean openRecipe(GuiFavoriteButton favoriteButton) {
         if (!favoriteButton.saveRecipeInBookmark()) return false;
         BookmarkGrid bookmarks = ItemPanels.bookmarkPanel.getGrid();
         GuiCraftingTree.openCraftingTreeGui(bookmarks, bookmarks.getNextGroupId() - 1);
