@@ -18,12 +18,16 @@ import net.minecraftforge.common.config.Configuration;
 /** Combines declarative rules once at registration; only arbitrary predicates need individual evaluation. */
 public final class MatcherRegistry {
     private final Configuration file;
+    private final TargetOverrides overrides;
     private final Set<String> registeredIds = new HashSet<String>();
     private final List<TargetMatcher> predicates = new ArrayList<TargetMatcher>();
     private final SimpleMatcher.Builder simpleRules = SimpleMatcher.builder();
     private SimpleMatcher merged = simpleRules.build();
 
-    public MatcherRegistry(Configuration file) { this.file = file; }
+    public MatcherRegistry(Configuration file) {
+        this.file = file;
+        overrides = new TargetOverrides(file);
+    }
 
     public static MatcherRegistry builtIns(Configuration file) {
         return new MatcherRegistry(file)
@@ -63,6 +67,34 @@ public final class MatcherRegistry {
     }
 
     public boolean matches(TargetContext context) {
+        if (overrides.appliesTo(context)) {
+            TargetIdentity identity = TargetIdentity.resolve(context);
+            Boolean match = identity == null ? null : overrides.get(identity.key);
+            if (match != null) return match;
+        }
+        return matchesDefaults(context);
+    }
+
+    public ToggleResult toggleTarget(TargetContext context) {
+        TargetIdentity identity = TargetIdentity.resolve(context);
+        if (identity == null) return null;
+        Boolean previous = overrides.get(identity.key);
+        boolean match = !(previous != null ? previous : matchesDefaults(context));
+        overrides.set(identity.key, match);
+        return new ToggleResult(identity, match);
+    }
+
+    public static final class ToggleResult {
+        public final TargetIdentity identity;
+        public final boolean match;
+
+        private ToggleResult(TargetIdentity identity, boolean match) {
+            this.identity = identity;
+            this.match = match;
+        }
+    }
+
+    private boolean matchesDefaults(TargetContext context) {
         if (merged.matches(context)) return true;
         for (TargetMatcher matcher : predicates) if (matcher.matches(context)) return true;
         return false;

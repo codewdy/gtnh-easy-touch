@@ -1,5 +1,11 @@
 key.categories.easytouch=GTNH 触屏优化
 key.easytouch.toggle=切换自适应左右键
+key.easytouch.toggleTarget=切换指向目标的 smart 匹配
+easytouch.target.enabled=已启用同类目标的 smart：%s
+easytouch.target.disabled=已禁用同类目标的 smart：%s
+easytouch.target.unavailable=请先指向可识别类型的方块或实体。
+easytouch.target.globalOff=（已保存，smart 总开关仍关闭）
+easytouch.target.players=玩家
 key.easytouch.openTree=打开 NEI 合成树（等效 Shift+T）
 easytouch.enabled=智能操作：开
 easytouch.disabled=智能操作：关（原版操作）

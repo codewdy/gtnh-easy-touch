@@ -2,18 +2,31 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.10 扩展 smart 模式的床识别，支持原版床、Et Futurum 彩色床、木匠床及实现 Forge 床接口的其他床。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
+**0.4.11 新增“切换指向目标的 smart 匹配”快捷键，按同类目标启用/禁用，立即保存并优先于默认名单。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
 
 ## 安装与使用
 
-1. 将 `build/libs/gtnh-easy-touch-0.4.10.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 将 `build/libs/gtnh-easy-touch-0.4.11.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
 3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
 4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
+5. 为“切换指向目标的 smart 匹配”绑定一个空闲键或鼠标侧键。在世界里对准方块或实体按一下，切换同类目标的匹配开关；默认未绑定。
 
 智能模式默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后恢复原版操作。背包、机器、NEI、聊天等 GUI 内始终保持正常鼠标语义。修改攻击/使用的鼠标绑定后，模组停止接管。
 
 玩家处于潜行状态（默认按住 Shift）时，新开始的鼠标按压使用原版映射：左键攻击/挖掘，右键使用/放置，即使目标在白名单中也不交换；准星旁的“交互”提示同时隐藏。统一依据 `player.isSneaking()` 判断。已经开始的长按仍保持原映射，需左右键全部松开后才按新的潜行状态判断。
+
+## 指向目标切换 smart 匹配
+
+“切换指向目标的 smart 匹配”按当前匹配结果反转：原本会交换的目标变为不交换，原本不匹配的目标变为交换。聊天提示显示目标名称和新状态；键盘长按重复事件不会反复切换。在 GUI、失焦、死亡或未进入世界时不处理；对空气或无法识别的目标不改写规则。
+
+作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
+
+方块优先按 Forge“选取方块”的物品注册名和变体识别，因此朝向、位置、物品数量、容器内容和自定义名称不改变规则。GT 设备使用其机器编号，AE2 使用指向的部件，终端不会连带切换线缆；无法返回选取物品的方块退回精确方块注册名和世界元数据。规则不按坐标保存，也不区分仅由 NBT 表示的外观差异。这里仅调用选取结果查询，不给玩家物品，也不执行方块交互。
+
+实体按种类识别，玩家归入同一类，不按 UUID 或自定义名称区分。同种实体的手动规则也覆盖驯服等默认条件，例如关闭狼会同时影响野狼和宠物狼。没有实体注册名时使用精确实体类名。
+
+切换匹配不改变 smart 总开关；总开关关闭时会保存规则并在提示中说明。潜行继续使用原版操作。已经开始的鼠标长按保持原映射，左右键全部松开后的下一次按压采用新规则。
 
 ## 配方树合成按钮
 
@@ -106,7 +119,7 @@ matchers {
 }
 ```
 
-未潜行且准星命中白名单目标时，下方仅显示“交互”；潜行或未命中时不显示提示。提示跟随当前目标，长按期间的实际按键映射仍按一次按压锁定。`general.showHud=false` 可以关闭该提示。
+未潜行且准星命中匹配目标（含手动规则）时，下方仅显示“交互”；潜行或未命中时不显示提示。提示跟随当前目标，长按期间的实际按键映射仍按一次按压锁定。`general.showHud=false` 可以关闭该提示。
 
 升级时保留全局开关和 HUD 设置。0.2.0 的 `whitelist` 列表会自动迁移一次：方块按注册名前缀分配到各 matcher，未知模组的自定义方块归入 `vanilla_blocks.blocks`；实体、宠物、方块实体、GT 设备与 AE2 部件列表分别迁入对应 matcher。空列表、自定义条目和元数据限制都保留，已存在的新配置优先。旧分类保留作参考，迁移后不再读取。0.1.0 的启发式 `rules` 仍不执行。
 
@@ -116,12 +129,14 @@ matchers {
 
 | 文件 | 职责 |
 | --- | --- |
-| [SmartMouseInput.java](src/main/java/io/github/wdy/easytouch/input/SmartMouseInput.java) | smart 鼠标交换、模式快捷键和准星提示 |
+| [SmartMouseInput.java](src/main/java/io/github/wdy/easytouch/input/SmartMouseInput.java) | smart 鼠标交换、模式/目标开关快捷键和准星提示 |
 | [MouseGesture.java](src/main/java/io/github/wdy/easytouch/input/MouseGesture.java) | 普通鼠标按压、双键重叠和映射锁定 |
 | [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 攻击/使用按键的状态合并、一次点击和队列清理 |
 | [MinecraftInput.java](src/main/java/io/github/wdy/easytouch/input/MinecraftInput.java) | Minecraft 环境判断和底层按键读写 |
 
 smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由底层统一写入 Minecraft。结束接管时恢复当前物理按键状态，进入 GUI 或切换模式时由入口清理正在进行的输入和待执行点击。
+
+[TargetIdentity](src/main/java/io/github/wdy/easytouch/matching/TargetIdentity.java) 生成稳定的目标种类标识；[TargetOverrides](src/main/java/io/github/wdy/easytouch/matching/TargetOverrides.java) 保存手动允许/禁用结果。[MatcherRegistry](src/main/java/io/github/wdy/easytouch/matching/MatcherRegistry.java) 在默认匹配之前应用覆盖规则，没有相关种类的覆盖时不调用额外的选取方块查询。GT/AE2 类型识别分别核对了 RC2 的 [BlockMachines.getDamageValue](https://github.com/GTNewHorizons/GT5-Unofficial/blob/5.09.54.205/src/main/java/gregtech/common/blocks/BlockMachines.java) 和 [BlockCableBus.getPickBlock](https://github.com/GTNewHorizons/Applied-Energistics-2-Unofficial/blob/rv3-beta-1080-GTNH/src/main/java/appeng/block/networking/BlockCableBus.java)。
 
 [NeiCraftingTreeInput](src/main/java/io/github/wdy/easytouch/nei/NeiCraftingTreeInput.java) 仅在客户端加载 NEI 时注册，负责配方树按钮、滚轮事件、可合成状态检查和返回原容器启动 NEI 自动合成。[NeiTreeQuantityScroll](src/main/java/io/github/wdy/easytouch/nei/NeiTreeQuantityScroll.java) 复用原生画布命中、数量规则和刷新方法，使用实时鼠标坐标适配 GUI 缩放及画布缩放、平移，不模拟 Ctrl 按键。
 
@@ -200,7 +215,7 @@ public final class TopFaceMatcher implements TargetMatcher {
 
 即可生成 `matchers.top_face` 配置并参与运行时匹配。无需修改 `TargetResolver`、`TouchConfig`、其他 matcher 或旧配置迁移代码。也可以在已有 registry 上调用 `register()` 注册规则。注册 id 必须唯一，支持小写字母、数字和下划线。
 
-registry 先查合并后的简单索引，未命中时按注册顺序调用剩余的复杂 matcher，任意一个返回 `true` 就交换，全部返回 `false` 则保持原版。`false` 表示“不匹配”，不会否决其他 matcher；因此给一个已被内置 matcher 接受的目标增加限制时，应调整原 matcher 或禁用它。合并会改变求值顺序并提前结束查询，matcher 只能读取状态，不应依赖调用次数、执行交互、创建 GUI 或发送操作数据包。`SimpleMatcher` 和 `AnyOfMatcher` 的 `matches()` 均为 `final`，避免子类覆盖的条件在合并时丢失。
+registry 先检查手动目标规则；没有对应的强制允许/禁用时，再查合并后的简单索引，未命中时按注册顺序调用剩余的复杂 matcher。默认 matcher 中任意一个返回 `true` 就匹配，全部返回 `false` 则保持原版；单个 matcher 的 `false` 仍不能否决其他 matcher，手动禁用通过独立的优先覆盖层实现。合并会改变求值顺序并提前结束查询，matcher 只能读取状态，不应依赖调用次数、执行交互、创建 GUI 或发送操作数据包。`SimpleMatcher` 和 `AnyOfMatcher` 的 `matches()` 均为 `final`，避免子类覆盖的条件在合并时丢失。
 
 ## 构建与验证
 
@@ -210,6 +225,8 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 
 按键层测试覆盖交换后不重复触发原生右键、退出接管时恢复当前物理按键，以及进入 GUI 时清除待执行点击和按住状态。
 
+目标开关测试覆盖覆盖默认允许、启用未知目标、再次切换、重读配置、总开关独立、同方块不同机器/部件变体、忽略位置/朝向/数量/自定义 NBT、同类实体覆盖驯服条件、无法选取物品的回退、空命中不写入、手动列表冲突、按目标种类跳过无关查询和长按期间的映射锁定。GT/AE2 的测试使用等效选取结果，真实部件仍需整合包实测。
+
 床规则测试覆盖原版类型和子类、各元数据及两半床、非原版基类的 Forge 床接口、名字含 bed 的非床目标、无命中/缺失方块、旧名单升级、独立禁用及异常回退。模组床使用等效接口测试替身，实际 Et Futurum 和木匠床仍需在完整客户端验证。
 
 启动流程测试覆盖鼠标释放、同步延迟、容器替换、取消和超时，以及“仅合成”保留分组、“合成并删除”仅成功启动后删除分组、启动被拒绝或异常时保留分组；删除退出测试覆盖等待松开、单次执行、退出被拦截及取消时保留书签。Netty 管线测试验证槽位和光标同步包均已处理后才能继续，且不向服务端发送额外标记包。按钮绘制、材料预检及实际合成仍需在完整 RC2 客户端验证。
@@ -217,6 +234,7 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 实际 GTNH / UU 环境仍需实测：
 
 - 石头左键挖掘；箱子左键打开、右键拆除；按住过程中移向另一类目标不会交换。
+- 绑定“切换指向目标的 smart 匹配”，对箱子、石头、GT 设备、AE2 面板/线缆及实体逐个切换，检查同类生效、不同变体独立、提示及重启持久化；长按键不反复切换，GUI/失焦不修改，鼠标长按松开后才采用新映射。
 - 原版床、不同颜色 Et Futurum 床和不同外观木匠床的床头/床尾均显示交互并交换鼠标；潜行保留原操作，基岩及普通装饰方块不交换。
 - 对僵尸和玩家保持原版，对牛和村民交换；野狼不交换，已驯服的狼交换。
 - GT 加工机、控制器和仓/舱交换，机器外壳和管线不交换。

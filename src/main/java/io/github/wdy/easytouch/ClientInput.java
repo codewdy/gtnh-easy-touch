@@ -10,6 +10,7 @@ import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.common.gameevent.InputEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.MouseEvent;
@@ -49,6 +50,12 @@ public final class ClientInput {
         smartMouse.cancel();
         keys.discardClicks();
     }
+
+    @SubscribeEvent
+    public void targetKey(InputEvent.KeyInputEvent event) { smartMouse.targetKeyInput(); }
+
+    @SubscribeEvent
+    public void targetMouse(InputEvent.MouseInputEvent event) { smartMouse.targetMouseInput(); }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void mouse(MouseEvent event) {

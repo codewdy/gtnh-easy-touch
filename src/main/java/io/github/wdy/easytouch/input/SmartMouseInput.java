@@ -4,6 +4,8 @@ import io.github.wdy.easytouch.Action;
 import io.github.wdy.easytouch.TouchConfig;
 import io.github.wdy.easytouch.input.KeyStateMerger.Key;
 import io.github.wdy.easytouch.matching.TargetResolver;
+import io.github.wdy.easytouch.matching.MatcherRegistry.ToggleResult;
+import io.github.wdy.easytouch.matching.MinecraftTargetContext;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.I18n;
@@ -24,6 +26,8 @@ public final class SmartMouseInput {
     private final Runnable resetInputs;
     private final MouseGesture gesture = new MouseGesture();
     private final KeyBinding toggle = new KeyBinding("key.easytouch.toggle", Keyboard.KEY_NONE, "key.categories.easytouch");
+    private final KeyBinding toggleTarget = new KeyBinding("key.easytouch.toggleTarget", Keyboard.KEY_NONE,
+        "key.categories.easytouch");
     private boolean waitForRelease;
 
     public SmartMouseInput(MinecraftInput input, TouchConfig config, KeyStateMerger.Source keys, Runnable resetInputs) {
@@ -35,7 +39,34 @@ public final class SmartMouseInput {
         this.resetInputs = resetInputs;
     }
 
-    public void registerKey() { ClientRegistry.registerKeyBinding(toggle); }
+    public void registerKey() {
+        ClientRegistry.registerKeyBinding(toggle);
+        ClientRegistry.registerKeyBinding(toggleTarget);
+    }
+
+    public void targetKeyInput() {
+        if (toggleTarget.getKeyCode() > Keyboard.KEY_NONE && Keyboard.getEventKeyState()
+                && !Keyboard.isRepeatEvent() && Keyboard.getEventKey() == toggleTarget.getKeyCode()) toggleTarget();
+    }
+
+    public void targetMouseInput() {
+        if (toggleTarget.getKeyCode() < Keyboard.KEY_NONE && Mouse.getEventButtonState()
+                && Mouse.getEventButton() >= 0 && Mouse.getEventButton() - 100 == toggleTarget.getKeyCode()) toggleTarget();
+    }
+
+    private void toggleTarget() {
+        if (!input.inWorld()) return;
+        ToggleResult result = config.matchers.toggleTarget(new MinecraftTargetContext(mc));
+        if (result == null) {
+            mc.thePlayer.addChatMessage(new ChatComponentTranslation("easytouch.target.unavailable"));
+            return;
+        }
+        // Keep the ongoing gesture's mapping locked; the changed rule applies to the next press.
+        ChatComponentTranslation feedback = new ChatComponentTranslation(
+            result.match ? "easytouch.target.enabled" : "easytouch.target.disabled", result.identity.displayName());
+        if (!config.enabled) feedback.appendSibling(new ChatComponentTranslation("easytouch.target.globalOff"));
+        mc.thePlayer.addChatMessage(feedback);
+    }
 
     private boolean defaultButtons() {
         return mc.gameSettings.keyBindAttack.getKeyCode() == -100
@@ -90,6 +121,8 @@ public final class SmartMouseInput {
     }
 
     public void tickEnd() {
+        // This shortcut uses individual input events, not queued/repeated tick presses.
+        while (toggleTarget.isPressed()) { }
         while (toggle.isPressed()) {
             if (mc.currentScreen == null && mc.thePlayer != null) {
                 resetInputs.run();
