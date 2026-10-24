@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import io.github.wdy.easytouch.whitelist.AppliedEnergisticsMatcher;
+import io.github.wdy.easytouch.whitelist.BedMatcher;
 import io.github.wdy.easytouch.whitelist.GregTechMatcher;
 import io.github.wdy.easytouch.whitelist.IronChestsMatcher;
 import io.github.wdy.easytouch.whitelist.ThaumcraftMatcher;
@@ -27,6 +28,7 @@ public final class MatcherRegistry {
     public static MatcherRegistry builtIns(Configuration file) {
         return new MatcherRegistry(file)
             .register("vanilla_blocks", VanillaBlockMatcher::new)
+            .register("beds", settings -> new BedMatcher())
             .register("vanilla_entities", VanillaEntityMatcher::new)
             .register("iron_chests", IronChestsMatcher::new)
             .register("tinkers_construct", TinkersConstructMatcher::new)

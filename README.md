@@ -2,11 +2,11 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.9 新增可配置的“打开 NEI 合成树（等效 Shift+T）”快捷键，支持物品、原生配方爱心按钮及已有合成组标题，无需同时按 Shift。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
+**0.4.10 扩展 smart 模式的床识别，支持原版床、Et Futurum 彩色床、木匠床及实现 Forge 床接口的其他床。适配 GTNH 2.9.0 RC2 的 NEI 2.8.155-GTNH。**
 
 ## 安装与使用
 
-1. 将 `build/libs/gtnh-easy-touch-0.4.9.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 将 `build/libs/gtnh-easy-touch-0.4.10.jar` 放入 GTNH 客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
 3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
 4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
@@ -51,6 +51,7 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 | --- | --- |
 | 原版容器 | 箱子、陷阱箱、末影箱、漏斗、发射器、投掷器 |
 | 原版功能方块 | 工作台、熔炉及燃烧中的熔炉、酿造台、附魔台、铁砧、信标、床、唱片机 |
+| 床 | 原版床及其子类（包括 Et Futurum 彩色床）、Forge `isBed` 返回真的床（包括木匠床），覆盖床头/床尾和颜色变体 |
 | 开关与机关 | 木门、活板门、栅栏门、按钮、拉杆、中继器和比较器（包括通电状态） |
 | 生物 | 村民、牛、蘑菇牛、羊、猪、鸡、马/驴/骡；狼和猫仅在已驯服时交换 |
 | 载具及装饰 | 船、普通矿车、运输矿车、漏斗矿车、物品展示框 |
@@ -61,6 +62,8 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 | 神秘时代 4 | 研究台、奥术工作台（按 TileEntity 的精确类名识别，不包含整个桌子方块） |
 
 完整注册名、元数据和匹配逻辑按类别放在 [whitelist/](src/main/java/io/github/wdy/easytouch/whitelist/) 下的独立 class 中，review 入口见下方。这些是明确列出的默认项，不会根据“具有背包”“能响应右键”等特征自动扩展。
+
+床在 smart 模式下左键交互、右键拆除；潜行时仍保留原版鼠标映射。新增床规则按 `BlockBed` 类型和 Forge 的 `isBed` 查询识别，不靠名称包含 `bed`，也不受颜色或注册名变化影响。已核对 RC2 所带的 [Et Futurum 2.6.60-GTNH 彩色床](https://github.com/GTNewHorizons/Et-Futurum-Requiem/blob/2.6.60-GTNH/src/main/java/ganymedes01/etfuturum/blocks/BlockDyedBed.java) 和 [Carpenter's Blocks 3.7.3-GTNH 木匠床](https://github.com/GTNewHorizons/CarpentersBlocks/blob/3.7.3-GTNH/src/main/java/com/carpentersblocks/block/BlockCarpentersBed.java)。只查询当前指向方块的床属性，不调用交互或睡眠逻辑来探测。
 
 默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、作物、玩家、敌对生物和未知模组生物。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发交换。例如：拿着方块对石头仍是左键挖掘、右键放置；拿着扳手对名单中的 GT 机器则是左键使用、右键拆卸。
 
@@ -75,6 +78,7 @@ GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管�
 | 配置分类 | 当前内置选项 |
 | --- | --- |
 | `matchers.vanilla_blocks` | `blocks`：方块注册名，可用 `@元数据` 限定变体 |
+| `matchers.beds` | `enabled`：按床类型和 Forge 床接口识别，默认开启；无需逐个添加床注册名 |
 | `matchers.vanilla_entities` | `entities`：实体注册名；`tamedEntities`：必须已驯服的实体 |
 | `matchers.iron_chests` | `blocks`：箱子注册名 |
 | `matchers.tinkers_construct` | `blocks`：工作台注册名与元数据 |
@@ -83,6 +87,8 @@ GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管�
 | `matchers.thaumcraft` | `tileEntities`：方块实体的精确类名 |
 
 首次加载会写入默认值，之后以保存的列表为准。删除条目不会被自动补回；空列表禁用对应匹配。内置列表不支持通配符。实体 matcher 自行保证 `tamedEntities` 的驯服要求优先于 `entities`。GT 内部设备编号不同于世界方块元数据，不要用 `gregtech:gt.blockmachines@设备编号` 区分机器。
+
+升级到 0.4.10 会自动添加默认开启的 `matchers.beds`，不改写已有名单；不需要删除旧配置。关闭该规则时，`vanilla_blocks.blocks` 中原有的 `minecraft:bed` 等显式条目仍会生效。
 
 例如，将原版方块 matcher 的列表缩小到箱子，同时关闭 Iron Chests matcher：
 
@@ -131,6 +137,7 @@ smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由�
 | 规则文件 | 匹配方式 |
 | --- | --- |
 | [VanillaBlockMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/VanillaBlockMatcher.java) | `SimpleMatcher`：原版方块注册名及元数据 |
+| [BedMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/BedMatcher.java) | `BlockBed` 类型及 Forge `isBed` 查询，保留实际床头/床尾坐标；接口异常按类型记录一次并回退 |
 | [VanillaEntityMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/VanillaEntityMatcher.java) | `AnyOfMatcher`：普通实体索引 + 宠物驯服条件；合并前先从普通索引排除需要驯服的实体 |
 | [IronChestsMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/IronChestsMatcher.java) | `SimpleMatcher`：Iron Chests 箱子 |
 | [TinkersConstructMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/TinkersConstructMatcher.java) | `SimpleMatcher`：匠魂工作台及允许的元数据 |
@@ -203,11 +210,14 @@ registry 先查合并后的简单索引，未命中时按注册顺序调用剩�
 
 按键层测试覆盖交换后不重复触发原生右键、退出接管时恢复当前物理按键，以及进入 GUI 时清除待执行点击和按住状态。
 
+床规则测试覆盖原版类型和子类、各元数据及两半床、非原版基类的 Forge 床接口、名字含 bed 的非床目标、无命中/缺失方块、旧名单升级、独立禁用及异常回退。模组床使用等效接口测试替身，实际 Et Futurum 和木匠床仍需在完整客户端验证。
+
 启动流程测试覆盖鼠标释放、同步延迟、容器替换、取消和超时，以及“仅合成”保留分组、“合成并删除”仅成功启动后删除分组、启动被拒绝或异常时保留分组；删除退出测试覆盖等待松开、单次执行、退出被拦截及取消时保留书签。Netty 管线测试验证槽位和光标同步包均已处理后才能继续，且不向服务端发送额外标记包。按钮绘制、材料预检及实际合成仍需在完整 RC2 客户端验证。
 
 实际 GTNH / UU 环境仍需实测：
 
 - 石头左键挖掘；箱子左键打开、右键拆除；按住过程中移向另一类目标不会交换。
+- 原版床、不同颜色 Et Futurum 床和不同外观木匠床的床头/床尾均显示交互并交换鼠标；潜行保留原操作，基岩及普通装饰方块不交换。
 - 对僵尸和玩家保持原版，对牛和村民交换；野狼不交换，已驯服的狼交换。
 - GT 加工机、控制器和仓/舱交换，机器外壳和管线不交换。
 - 同一格 AE 线缆上的终端面板交换，指向线缆本身不交换。
