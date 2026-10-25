@@ -17,7 +17,7 @@ public class MatcherBehaviorTest extends MatcherTestSupport {
             "appliedenergistics2:tile.BlockDrive", "TConstruct:CraftingStation"}) {
             assertTrue(id, rules.matches(block(id, 3)));
         }
-        for (String id : new String[] {"minecraft:stone", "minecraft:wheat", "unknown:interactive_machine",
+        for (String id : new String[] {"minecraft:stone", "minecraft:tallgrass", "unknown:interactive_machine",
             "StorageDrawers:fullDrawers1", "JABBA:barrel", "gregtech:gt.blockmachines",
             "appliedenergistics2:tile.BlockCableBus", "appliedenergistics2:tile.BlockController"}) {
             assertFalse(id, rules.matches(block(id, 0)));
