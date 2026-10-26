@@ -29,6 +29,8 @@ public final class TouchButtons {
     private final TouchConfig config;
     private final Supplier<Action> secondary;
     private final GlobalTouchMenu menu;
+    private final MappingMenu mappingMenu;
+    private final Runnable reset;
     private final Minecraft mc = Minecraft.getMinecraft();
     private final KeyStateMerger.Source source;
     private final VirtualKeyboard keyboard = new VirtualKeyboard();
@@ -48,7 +50,12 @@ public final class TouchButtons {
             if (down && mc.currentScreen == null) source.holdCode(code);
             else if (!down) source.releaseCode(code);
         });
-        Runnable reset = () -> { cancel(); resetInputs.run(); TouchInput.cancelGuiTouch(); };
+        reset = () -> { cancel(); resetInputs.run(); TouchInput.cancelGuiTouch(); };
+        mappingMenu = new MappingMenu(option -> {
+            List<Integer> combination = keys(option);
+            chords.press(combination);
+            chords.release(combination);
+        });
         menu = new GlobalTouchMenu(reset, item -> {
             reset.run();
             if (item == 1) config.toggle();
@@ -92,10 +99,11 @@ public final class TouchButtons {
     private boolean menuAvailable() {
         return enabled && Display.isActive() && (mc.currentScreen != null || mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus);
     }
-    public boolean visible(TouchLayout.Button b) { return mc.currentScreen == null ? b.world : b.other && !b.smartSecondary; }
+    public boolean visible(TouchLayout.Button b) { return mc.currentScreen == null ? b.world : b.other && (b.mode == 3 || !b.smartSecondary); }
     public boolean accept(TouchSample s) {
         if (s.kind == TouchSample.Kind.RESET || !menuAvailable()) { menu.reset(); cancel(); return false; }
         ScaledResolution r = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
+        if (available() && config.buttonsVisible && mappingMenu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (menu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (!available() || !config.buttonsVisible) { cancel(); return false; }
         if (s.simulated() || !s.valid()) return false;
@@ -104,6 +112,10 @@ public final class TouchButtons {
         if (b != null) {
             if (s.kind == TouchSample.Kind.UP || s.kind == TouchSample.Kind.CANCEL) {
                 contacts.remove(id);
+                if (b.mode == 3 && s.kind == TouchSample.Kind.UP
+                        && b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) {
+                    reset.run(); mappingMenu.open(b); return true;
+                }
                 if ((b.mode == 1 && !contacts.containsValue(b)) || s.kind == TouchSample.Kind.CANCEL) release(b);
             }
             return true;
@@ -113,6 +125,7 @@ public final class TouchButtons {
             b = layout.buttons.get(i);
             if (!visible(b) || !b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) continue;
             contacts.put(id, b);
+            if (b.mode == 3) return true;
             if (b.mode == 2 && held.containsKey(b)) { release(b); return true; }
             if (!held.containsKey(b)) {
                 List<Integer> combination = keys(b);
@@ -131,6 +144,7 @@ public final class TouchButtons {
     public boolean mouseHeld(int button) { return mouse.held(button); }
     public void flushMouse() { mouse.flush(); }
     public void cancel() {
+        mappingMenu.reset();
         mouse.cancel();
         for (int code : keyboard.cancel()) {
             KeyBinding.setKeyBindState(code, mc.currentScreen == null && Display.isActive() && (code < 0 ? TouchInput.mouseButtonDown(code+100) : VirtualKeyboard.physicalDown(code)));
@@ -142,9 +156,33 @@ public final class TouchButtons {
         if (available() && config.buttonsVisible)
         for (TouchLayout.Button b : layout.buttons) if (visible(b)) {
             drawButton(mc, b, w, h, held.containsKey(b), false);
-            if (keys(b).isEmpty()) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
+            if (b.mode == 3 ? b.options.isEmpty() : keys(b).isEmpty()) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
         }
         if (menuAvailable()) drawMenu(w, h);
+        if (available() && config.buttonsVisible && mappingMenu.isOpen()) drawMappingMenu(w,h);
+    }
+    private void drawMappingMenu(int w, int h) {
+        Gui.drawRect(0,0,w,h,0x88202730);
+        int x=mappingMenu.left(w), width=Math.min(MappingMenu.WIDTH,w-8), rows=mappingMenu.rows(h);
+        Circle.text(mc,mappingMenu.button().label,w/2f,18,width,true,0xFFFFFF);
+        List<TouchLayout.Button> options=mappingMenu.button().options;
+        for (int row=0; row<rows; row++) {
+            int index=mappingMenu.page()*rows+row;
+            if (index >= options.size()) break;
+            int y=mappingMenu.top()+row*MappingMenu.ROW;
+            Gui.drawRect(x,y,x+width,y+MappingMenu.ROW-2,0xDD253747);
+            TouchLayout.Button option=options.get(index);
+            Circle.text(mc,option.label,x+width/2f,y+9,width-8,true,keys(option).isEmpty() ? 0xFF8888 : 0xECF4FA);
+        }
+        if (options.isEmpty()) Circle.text(mc,"请先在编辑器添加子选项",w/2f,48,width,true,0xFF8888);
+        int y=mappingMenu.top()+rows*MappingMenu.ROW;
+        String[] labels={"上一页", "下一页", "关闭"};
+        for (int i=0;i<3;i++) {
+            int left=x+i*width/3, right=x+(i+1)*width/3;
+            Gui.drawRect(left,y,right-2,y+MappingMenu.ROW-2,0xDD253747);
+            Circle.text(mc,labels[i],(left+right)/2f,y+9,width/3-4,true,0xECF4FA);
+        }
+        Circle.text(mc,(mappingMenu.page()+1)+" / "+mappingMenu.pages(h),w/2f,y+MappingMenu.ROW+2,width,true,0xECF4FA);
     }
     private void drawMenu(int w, int h) {
         int x = menu.left(w), y = menu.top(h);

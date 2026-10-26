@@ -11,7 +11,7 @@ public final class LayoutEditor extends GuiScreen {
     private final TouchButtons owner;
     private final GuiScreen parent;
     private final TouchLayout draft;
-    private int selected = -1, screen;
+    private int selected = -1, screen, option = -1, optionPage;
     private int toolbarX = 4, toolbarY = 4;
     private boolean other, dragging, keypad, smartChoice;
     private int dragX, dragY;
@@ -22,7 +22,12 @@ public final class LayoutEditor extends GuiScreen {
         this.owner = owner; this.parent = parent; draft = owner.layout.copy();
         if (owner.loadError != null) message = owner.loadError;
     }
-    private TouchLayout.Button current() { return selected >= 0 && selected < draft.buttons.size() ? draft.buttons.get(selected) : null; }
+    private TouchLayout.Button rootButton() { return selected >= 0 && selected < draft.buttons.size() ? draft.buttons.get(selected) : null; }
+    private TouchLayout.Button current() {
+        TouchLayout.Button root = rootButton();
+        return root != null && option >= 0 ? root.options.get(option) : root;
+    }
+    private int optionRows() { return Math.max(1, (height - 100) / 26); }
     private void button(int id, int x, int y, int w, String text) { buttonList.add(new CircleControlButton(id, x, y, w, text)); }
     private void toolbarButton(int id, int width, String label) {
         if (toolbarX + width > this.width - 4) { toolbarX = 4; toolbarY += 24; }
@@ -39,12 +44,13 @@ public final class LayoutEditor extends GuiScreen {
             return;
         }
         int x = width/2-145, y = 52;
-        if (screen == 1) toolbarButton(18, 100, "返回布局");
+        if (screen == 1) toolbarButton(18, 100, option >= 0 ? "返回子选项" : "返回布局");
         TouchLayout.Button b = current();
         if (screen == 1 && b != null) {
             name = new GuiTextField(fontRendererObj, x, y, 290, 20); name.setMaxStringLength(40); name.setText(b.label);
-            button(10, x, y+26, 290, "映射: " + target(b));
-            button(11, x, y+50, 290, "触发: " + (b.mode == 2 ? "点击切换" : "按住触发"));
+            button(10, x, y+26, 290, b.mode == 3 ? "配置子选项 (" + b.options.size() + ")" : "映射: " + target(b));
+            if (option >= 0) { button(34, x, y+50, 290, "删除此子选项"); return; }
+            button(11, x, y+50, 290, "触发: " + (b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
             button(12, x, y+74, 142, "世界: " + (b.world ? "显示" : "隐藏"));
             button(13, x+148, y+74, 142, "其他: " + (b.other ? "显示" : "隐藏"));
             button(14, x, y+98, 142, "大小 -"); button(15, x+148, y+98, 142, "大小 + ("+b.size+")");
@@ -52,6 +58,13 @@ public final class LayoutEditor extends GuiScreen {
         } else if (screen == 1 && selected == -2) {
             button(19, x, y+26, 290, "轮盘: " + (draft.wheelVisible ? "显示" : "隐藏"));
             button(14, x, y+54, 142, "缩小"); button(15, x+148, y+54, 142, "放大");
+        } else if (screen == 3 && b != null) {
+            toolbarButton(30, 100, "返回按键");
+            toolbarButton(31, 100, "新增子选项");
+            toolbarButton(32, 72, "上一页"); toolbarButton(33, 72, "下一页");
+            optionPage = Math.min(optionPage, Math.max(0, (b.options.size()-1)/optionRows()));
+            for (int i=optionPage*optionRows(); i<Math.min(b.options.size(), (optionPage+1)*optionRows()); i++)
+                button(2000+i, x, 74+(i%optionRows())*26, 290, b.options.get(i).label + " / " + target(b.options.get(i)));
         } else if (screen == 2) {
             int[][] main = {
                 {1,59,60,61,62,63,64,65,66,67,68,87,88,-200},
@@ -101,6 +114,7 @@ public final class LayoutEditor extends GuiScreen {
         return text.length() == 0 ? "未设置" : text.toString();
     }
     private String target(TouchLayout.Button b) {
+        if (b.mode == 3) return "菜单 (" + b.options.size() + " 项)";
         if (b.smartSecondary) return "Smart 副键（Shift 时使用/右键）";
         return !b.keys.isEmpty() ? chordLabel(b.keys) : b.binding.isEmpty() ? (b.key == 0 ? "未设置" : b.key < 0 ? "鼠标"+keyLabel(b.key)+"键" : Keyboard.getKeyName(b.key)) : I18n.format(b.binding);
     }
@@ -119,15 +133,15 @@ public final class LayoutEditor extends GuiScreen {
                 catch (IOException ex) { message = "保存失败: " + ex.getMessage(); }
                 return;
             case 7: mc.displayGuiScreen(parent); return;
-            case 10: selectedKeys.clear(); smartChoice=b.smartSecondary; if (!smartChoice) selectedKeys.addAll(owner.keys(b)); screen = 2; break;
-            case 11: b.mode = b.mode == 2 ? 1 : 2; break;
+            case 10: if (b.mode == 3) { optionPage=0; screen=3; break; } selectedKeys.clear(); smartChoice=b.smartSecondary; if (!smartChoice) selectedKeys.addAll(owner.keys(b)); screen = 2; break;
+            case 11: b.mode = b.mode % 3 + 1; break;
             case 12: b.world = !b.world; break;
             case 13: b.other = !b.other; break;
             case 14: if (b != null) b.size = Math.max(24,b.size-4); else draft.wheelScale = Math.max(.5f,draft.wheelScale-.1f); break;
             case 15: if (b != null) b.size = Math.min(100,b.size+4); else draft.wheelScale = Math.min(2,draft.wheelScale+.1f); break;
             case 16: b.opacity = Math.max(10,b.opacity-5); break;
             case 17: b.opacity = Math.min(100,b.opacity+5); break;
-            case 18: screen = 0; break;
+            case 18: screen = option >= 0 ? 3 : 0; option=-1; break;
             case 19: draft.wheelVisible = !draft.wheelVisible; break;
             case 20: keypad = !keypad; break;
             case 21: selectedKeys.clear(); smartChoice=false; break;
@@ -138,9 +152,15 @@ public final class LayoutEditor extends GuiScreen {
                 screen=1;
                 break;
             case 23: screen = 1; break;
+            case 30: screen=1; break;
+            case 31: b.options.add(new TouchLayout.Button()); option=b.options.size()-1; screen=1; break;
+            case 32: optionPage=Math.max(0,optionPage-1); break;
+            case 33: optionPage++; break;
+            case 34: rootButton().options.remove(option); option=-1; screen=3; break;
             case 800: smartChoice=!smartChoice; selectedKeys.clear(); break;
             default:
-                if (btn.id >= 900 && screen == 2) {
+                if (btn.id >= 2000 && screen == 3) { option=btn.id-2000; screen=1; }
+                else if (btn.id >= 900 && screen == 2) {
                     smartChoice=false;
                     Integer key=btn.id-1000;
                     if (!selectedKeys.remove(key)) selectedKeys.add(key);
@@ -164,7 +184,7 @@ public final class LayoutEditor extends GuiScreen {
             drawRect(0, 0, width, toolbarY+36, 0x88202730);
             drawCenteredString(fontRendererObj,fontRendererObj.trimStringToWidth(status,width-8),width/2,toolbarY+24,0xFFFFFF);
         } else {
-            drawCenteredString(fontRendererObj,screen == 2 ? "点选多个键组成组合键；点圆形按钮确认" : "按键属性",width/2,32,0xFFFFFF);
+            drawCenteredString(fontRendererObj,screen == 3 ? "子选项：点选编辑；选择后只按一次" : screen == 2 ? "点选多个键组成组合键；点圆形按钮确认" : option >= 0 ? "子选项属性（执行一次）" : "按键属性",width/2,screen == 3 ? 56 : 32,0xFFFFFF);
             if (screen == 2) drawCenteredString(fontRendererObj,fontRendererObj.trimStringToWidth(smartChoice ? "Smart 副键：反向操作；Shift 时右键" : chordLabel(selectedKeys),width-16),width/2,46,0x88FFBB);
             if (screen == 1 && current() != null) name.drawTextBox();
         }
@@ -196,7 +216,7 @@ public final class LayoutEditor extends GuiScreen {
     }
     @Override protected void mouseMovedOrUp(int x,int y,int button) { if (button == 0) dragging=false; super.mouseMovedOrUp(x,y,button); }
     @Override protected void keyTyped(char c,int key) {
-        if (key == Keyboard.KEY_ESCAPE) { captureName(); if (screen == 0) mc.displayGuiScreen(parent); else { screen=0; initGui(); } return; }
+        if (key == Keyboard.KEY_ESCAPE) { captureName(); if (screen == 0) mc.displayGuiScreen(parent); else { screen=screen == 2 ? 1 : option >= 0 ? 3 : screen == 3 ? 1 : 0; if (screen == 3) option=-1; initGui(); } return; }
         if (screen == 1 && current() != null) name.textboxKeyTyped(c,key);
     }
     @Override public void updateScreen() { if (screen == 1 && name != null) name.updateCursorCounter(); }
