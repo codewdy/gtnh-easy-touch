@@ -1,6 +1,16 @@
 key.categories.easytouch=GTNH 触屏优化
 key.easytouch.toggle=切换自适应左右键
 key.easytouch.toggleTarget=切换指向目标的 smart 匹配
+key.easytouch.touchDebug=打开多点触控调试页
+easytouch.touch.title=多点触控检测
+easytouch.touch.reset=重置触点统计
+easytouch.touch.status.ready=触点监听已连接。此页面只检测输入，不执行游戏操作。
+easytouch.touch.status.disabled=触点转发已关闭，请在配置 touch.enabled 中开启并重启。
+easytouch.touch.status.failed=触点监听发生错误，已停用；请查看日志中的 [Touch] 信息。
+easytouch.touch.count=当前原生触点：%s    同时触点峰值：%s
+easytouch.touch.events=原生触点事件：%s  鼠标模拟触点：%s  鼠标事件：%s  队列丢弃：%s
+easytouch.touch.hint=用两根手指同时按住并分别移动。绿色标记为原生触点，灰色为鼠标模拟触点。
+easytouch.touch.waiting=尚未收到原生触点。若只有鼠标计数变化，需要检查串流触点透传。
 easytouch.target.enabled=已启用同类目标的 smart：%s
 easytouch.target.disabled=已禁用同类目标的 smart：%s
 easytouch.target.unavailable=请先指向可识别类型的方块或实体。

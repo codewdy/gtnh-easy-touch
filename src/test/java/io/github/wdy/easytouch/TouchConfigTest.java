@@ -9,6 +9,21 @@ import static org.junit.Assert.*;
 
 public class TouchConfigTest extends MatcherTestSupport {
     @Test
+    public void touchForwardingDefaultsOnAndExplicitDisablePersists() throws Exception {
+        File path = temp.newFile("touch.cfg");
+        TouchConfig defaults = new TouchConfig(path);
+        assertTrue(defaults.touchEnabled);
+        assertFalse(defaults.touchLogEvents);
+        Configuration file = new Configuration(path);
+        file.get("touch", "enabled", true).set(false);
+        file.get("touch", "logEvents", false).set(true);
+        file.save();
+        TouchConfig reloaded = new TouchConfig(path);
+        assertFalse(reloaded.touchEnabled);
+        assertTrue(reloaded.touchLogEvents);
+    }
+
+    @Test
     public void upgradeFromOriginalHeuristicsPreservesModeButIgnoresOldRules() throws Exception {
         File file = temp.newFile("upgrade.cfg");
         Files.write(file.toPath(), ("general {\n B:enabled=false\n}\n"

@@ -3,19 +3,28 @@ package io.github.wdy.easytouch;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
+import io.github.wdy.easytouch.touch.TouchInput;
 
-@Mod(modid = EasyTouch.ID, name = "GTNH Easy Touch", version = "0.4.12",
-    acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*")
+@Mod(modid = EasyTouch.ID, name = "GTNH Easy Touch", version = "0.4.14",
+    acceptedMinecraftVersions = "[1.7.10]", acceptableRemoteVersions = "*",
+    dependencies = "required-after:lwjgl3ify@[3.0.37,)")
 public final class EasyTouch {
     public static final String ID = "gtnheasytouch";
+    private TouchConfig config;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        if (event.getSide().isClient()) ClientInput.install(new TouchConfig(event.getSuggestedConfigurationFile()));
+        if (event.getSide().isClient()) {
+            config = new TouchConfig(event.getSuggestedConfigurationFile());
+            ClientInput.install(config);
+        }
     }
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        if (event.getSide().isClient()) ClientInput.installNeiCrafting();
+        if (event.getSide().isClient()) {
+            ClientInput.installNeiCrafting();
+            TouchInput.install(config);
+        }
     }
 }

@@ -1,6 +1,16 @@
 key.categories.easytouch=GTNH Easy Touch
 key.easytouch.toggle=Toggle adaptive mouse buttons
 key.easytouch.toggleTarget=Toggle smart matching for pointed target type
+key.easytouch.touchDebug=Open multitouch diagnostics
+easytouch.touch.title=Multitouch diagnostics
+easytouch.touch.reset=Reset touch stats
+easytouch.touch.status.ready=Touch listener connected. This screen observes input without triggering gameplay actions.
+easytouch.touch.status.disabled=Touch forwarding is disabled. Enable touch.enabled in the config and restart.
+easytouch.touch.status.failed=Touch listener failed and was disabled. See [Touch] messages in the log.
+easytouch.touch.count=Native contacts: %s    Peak simultaneous contacts: %s
+easytouch.touch.events=Native touch events: %s  Mouse-simulated touch: %s  Mouse events: %s  Queue drops: %s
+easytouch.touch.hint=Hold two fingers and move them independently. Green marks native touch; gray marks mouse-simulated touch.
+easytouch.touch.waiting=No native touch received. If only mouse counts change, check touch passthrough in your streaming app.
 easytouch.target.enabled=Smart enabled for this target type: %s
 easytouch.target.disabled=Smart disabled for this target type: %s
 easytouch.target.unavailable=Point at a block or entity with an identifiable type first.
