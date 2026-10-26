@@ -37,7 +37,9 @@ public final class ClientInput {
             public boolean inWorld() { return input.inWorld(); }
             public int width() { return input.mc.displayWidth; }
             public int height() { return input.mc.displayHeight; }
-            public void turn(float dx, float dy) { input.turn(dx, dy); }
+            public void turn(float dx, float dy) {
+                input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
+            }
             public void click() { actions.click(); }
             public void press() { actions.press(); }
             public void release() { actions.release(); }

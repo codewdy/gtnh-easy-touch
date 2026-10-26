@@ -4,6 +4,7 @@ import java.io.File;
 import io.github.wdy.easytouch.matching.LegacyWhitelistMigration;
 import io.github.wdy.easytouch.matching.MatcherRegistry;
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
 
 public final class TouchConfig {
     private final Configuration file;
@@ -11,6 +12,7 @@ public final class TouchConfig {
     public final boolean hud;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
+    public final float touchDragSensitivity;
     public final MatcherRegistry matchers;
 
     public TouchConfig(File path) {
@@ -22,6 +24,15 @@ public final class TouchConfig {
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
         touchLogEvents = file.getBoolean("logEvents", "touch", false,
             "Log touch down/up/cancel/reset events for diagnostics. Motion events are not logged.");
+        Property dragSensitivity = file.get("touch", "dragSensitivity", 1.0,
+            "Touch camera drag sensitivity multiplier (0.1 to 5.0). 1.0 keeps the default speed; "
+                + "0.5 halves it; 2.0 doubles it. Multiplies Minecraft mouse sensitivity. "
+                + "Does not affect physical mouse, GUI touch or gesture thresholds. Restart to apply.", 0.1, 5.0);
+        double sensitivity = dragSensitivity.getDouble(1.0);
+        if (!Double.isFinite(sensitivity)) sensitivity = 1.0;
+        sensitivity = Math.max(0.1, Math.min(5.0, sensitivity));
+        touchDragSensitivity = (float) sensitivity;
+        dragSensitivity.set(sensitivity);
         LegacyWhitelistMigration.apply(file);
         matchers = MatcherRegistry.builtIns(file);
         if (file.hasCategory("rules")) {

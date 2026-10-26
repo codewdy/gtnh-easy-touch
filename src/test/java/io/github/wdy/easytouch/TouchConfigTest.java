@@ -9,6 +9,30 @@ import static org.junit.Assert.*;
 
 public class TouchConfigTest extends MatcherTestSupport {
     @Test
+    public void dragSensitivityDefaultsToOneAndCustomValuePersists() throws Exception {
+        File path = temp.newFile("sensitivity.cfg");
+        assertEquals(1.0f, new TouchConfig(path).touchDragSensitivity, 0);
+        Configuration file = new Configuration(path);
+        file.get("touch", "dragSensitivity", 1.0).set(0.5);
+        file.save();
+        assertEquals(0.5f, new TouchConfig(path).touchDragSensitivity, 0);
+        assertEquals(0.5f, new TouchConfig(path).touchDragSensitivity, 0);
+    }
+
+    @Test
+    public void invalidDragSensitivityIsSanitizedAndSaved() throws Exception {
+        String[] values = { "-1", "0", "9", "NaN", "Infinity", "-Infinity", "invalid" };
+        float[] expected = { .1f, .1f, 5f, 1f, 1f, 1f, 1f };
+        for (int i = 0; i < values.length; i++) {
+            File path = temp.newFile("sensitivity-" + i + ".cfg");
+            Files.write(path.toPath(), ("touch {\n D:dragSensitivity=" + values[i] + "\n}\n")
+                .getBytes(StandardCharsets.UTF_8));
+            assertEquals(values[i], expected[i], new TouchConfig(path).touchDragSensitivity, 0);
+            assertEquals(values[i], expected[i], new TouchConfig(path).touchDragSensitivity, 0);
+        }
+    }
+
+    @Test
     public void touchForwardingDefaultsOnAndExplicitDisablePersists() throws Exception {
         File path = temp.newFile("touch.cfg");
         TouchConfig defaults = new TouchConfig(path);
