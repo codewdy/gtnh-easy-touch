@@ -14,6 +14,7 @@ public final class LayoutEditor extends GuiScreen {
     private int selected = -1, screen, option = -1, optionPage;
     private int toolbarX = 4, toolbarY = 4;
     private boolean other, dragging, keypad, smartChoice;
+    private boolean dispatchingButtons, rebuildRequested;
     private int dragX, dragY;
     private GuiTextField name;
     private String message = "";
@@ -28,7 +29,7 @@ public final class LayoutEditor extends GuiScreen {
         return root != null && option >= 0 ? root.options.get(option) : root;
     }
     private int optionRows() { return Math.max(1, (height - 100) / 26); }
-    private void button(int id, int x, int y, int w, String text) { buttonList.add(new CircleControlButton(id, x, y, w, text)); }
+    private void button(int id, int x, int y, int w, String text) { buttonList.add(new TextControlButton(id, x, y, w, text)); }
     private void toolbarButton(int id, int width, String label) {
         if (toolbarX + width > this.width - 4) { toolbarX = 4; toolbarY += 24; }
         button(id, toolbarX, toolbarY, width, label);
@@ -39,7 +40,6 @@ public final class LayoutEditor extends GuiScreen {
         if (screen == 0) {
             toolbarButton(1, 64, "新增"); toolbarButton(2, 64, "编辑"); toolbarButton(3, 64, "删除");
             toolbarButton(4, 100, "预览: " + (other ? "其他" : "世界"));
-            toolbarButton(5, 80, "选择下一个");
             toolbarButton(6, 68, "保存"); toolbarButton(7, 72, "取消");
             return;
         }
@@ -127,7 +127,6 @@ public final class LayoutEditor extends GuiScreen {
             case 2: if (b != null || selected == -2) screen = 1; break;
             case 3: if (b != null) { draft.buttons.remove(selected); selected = -1; } else if (selected == -2) draft.wheelVisible = false; break;
             case 4: other = !other; break;
-            case 5: selected = selected == -2 ? (draft.buttons.isEmpty() ? -2 : 0) : selected+1 >= draft.buttons.size() ? -2 : selected+1; break;
             case 6:
                 try { owner.save(draft); mc.displayGuiScreen(parent); }
                 catch (IOException ex) { message = "保存失败: " + ex.getMessage(); }
@@ -166,7 +165,9 @@ public final class LayoutEditor extends GuiScreen {
                     if (!selectedKeys.remove(key)) selectedKeys.add(key);
                 }
         }
-        initGui();
+        // GuiScreen keeps iterating buttonList after actionPerformed returns.
+        // Rebuild only after dispatch so this click cannot hit a new page's controls.
+        if (dispatchingButtons) rebuildRequested=true; else initGui();
     }
     @Override public void drawScreen(int mx, int my, float partial) {
         drawDefaultBackground();
@@ -184,7 +185,7 @@ public final class LayoutEditor extends GuiScreen {
             drawRect(0, 0, width, toolbarY+36, 0x88202730);
             drawCenteredString(fontRendererObj,fontRendererObj.trimStringToWidth(status,width-8),width/2,toolbarY+24,0xFFFFFF);
         } else {
-            drawCenteredString(fontRendererObj,screen == 3 ? "子选项：点选编辑；选择后只按一次" : screen == 2 ? "点选多个键组成组合键；点圆形按钮确认" : option >= 0 ? "子选项属性（执行一次）" : "按键属性",width/2,screen == 3 ? 56 : 32,0xFFFFFF);
+            drawCenteredString(fontRendererObj,screen == 3 ? "子选项：点选编辑；选择后只按一次" : screen == 2 ? "点选多个键组成组合键；点“确定”完成选择" : option >= 0 ? "子选项属性（执行一次）" : "按键属性",width/2,screen == 3 ? 56 : 32,0xFFFFFF);
             if (screen == 2) drawCenteredString(fontRendererObj,fontRendererObj.trimStringToWidth(smartChoice ? "Smart 副键：反向操作；Shift 时右键" : chordLabel(selectedKeys),width-16),width/2,46,0x88FFBB);
             if (screen == 1 && current() != null) name.drawTextBox();
         }
@@ -196,7 +197,20 @@ public final class LayoutEditor extends GuiScreen {
     private float wheelY() { float r=wheelRadius(); return draft.wheelY < 0 ? height-r-36 : r+draft.wheelY*Math.max(0,height-2*r); }
     @Override protected void mouseClicked(int x,int y,int button) {
         if (screen == 1 && current() != null) name.mouseClicked(x,y,button);
-        for (Object obj : buttonList) { GuiButton b = (GuiButton)obj; if (b.mousePressed(mc,x,y)) { super.mouseClicked(x,y,button); return; } }
+        for (Object obj : buttonList) {
+            GuiButton b = (GuiButton)obj;
+            if (!b.mousePressed(mc,x,y)) continue;
+            dispatchingButtons=true;
+            try { super.mouseClicked(x,y,button); }
+            finally {
+                dispatchingButtons=false;
+                if (rebuildRequested) {
+                    rebuildRequested=false;
+                    if (mc.currentScreen == this) initGui();
+                }
+            }
+            return;
+        }
         if (screen != 0 || button != 0) return;
         for (int i=draft.buttons.size()-1;i>=0;i--) {
             TouchLayout.Button b=draft.buttons.get(i);

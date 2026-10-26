@@ -103,6 +103,7 @@ public final class TouchButtons {
     public boolean accept(TouchSample s) {
         if (s.kind == TouchSample.Kind.RESET || !menuAvailable()) { menu.reset(); cancel(); return false; }
         ScaledResolution r = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
+        sizeMenus(r.getScaledWidth(), r.getScaledHeight());
         if (available() && config.buttonsVisible && mappingMenu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (menu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (!available() || !config.buttonsVisible) { cancel(); return false; }
@@ -153,6 +154,7 @@ public final class TouchButtons {
         chords.clear(); held.clear(); contacts.clear(); source.clear();
     }
     public void draw(int w, int h) {
+        sizeMenus(w,h);
         if (available() && config.buttonsVisible)
         for (TouchLayout.Button b : layout.buttons) if (visible(b)) {
             drawButton(mc, b, w, h, held.containsKey(b), false);
@@ -161,43 +163,74 @@ public final class TouchButtons {
         if (menuAvailable()) drawMenu(w, h);
         if (available() && config.buttonsVisible && mappingMenu.isOpen()) drawMappingMenu(w,h);
     }
+    private static final int MENU_PADDING = 8;
+    private String[] menuLabels() {
+        return new String[]{"Smart: " + (config.enabled ? "开启" : "关闭"),
+            config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
+            mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射"};
+    }
+    private int textWidth(String label) { return (int)Math.ceil(mc.fontRenderer.getStringWidth(label)*.8f); }
+    private int fittedMenuWidth(int textWidth, int screenWidth) {
+        return Math.max(1,Math.min(screenWidth-12,Math.max(32,textWidth+MENU_PADDING*2)));
+    }
+    /** Use the same font measurements before drawing and hit testing, including after GUI resize. */
+    private void sizeMenus(int w, int h) {
+        int longest=0;
+        for (String label : menuLabels()) longest=Math.max(longest,textWidth(label));
+        menu.panelWidth(fittedMenuWidth(longest,w));
+        if (!mappingMenu.isOpen()) return;
+        longest=0;
+        for (TouchLayout.Button option : mappingMenu.button().options) longest=Math.max(longest,textWidth(option.label));
+        if (mappingMenu.button().options.isEmpty()) longest=textWidth("请先添加子选项");
+        if (mappingMenu.pages(h)>1) longest=Math.max(longest,2*Math.max(textWidth("上一页"),textWidth("下一页"))+MENU_PADDING*2);
+        mappingMenu.panelWidth(fittedMenuWidth(longest,w));
+    }
+    private void menuBackground(int x, int y, int width, int height) {
+        Gui.drawRect(x,y,x+width,y+height,0xF0222E3B);
+        Gui.drawRect(x,y,x+width,y+1,0xFF71879A);
+        Gui.drawRect(x,y+height-1,x+width,y+height,0xFF71879A);
+        Gui.drawRect(x,y,x+1,y+height,0xFF71879A);
+        Gui.drawRect(x+width-1,y,x+width,y+height,0xFF71879A);
+    }
+    private void menuDivider(int x, int y, int width) {
+        Gui.drawRect(x+1,y-1,x+width-1,y+1,0xFF8298AA);
+    }
     private void drawMappingMenu(int w, int h) {
-        Gui.drawRect(0,0,w,h,0x88202730);
-        int x=mappingMenu.left(w), width=Math.min(MappingMenu.WIDTH,w-8), rows=mappingMenu.rows(h);
-        Circle.text(mc,mappingMenu.button().label,w/2f,18,width,true,0xFFFFFF);
+        int x=mappingMenu.left(w), width=mappingMenu.panelWidth(), rows=mappingMenu.rows(h);
         List<TouchLayout.Button> options=mappingMenu.button().options;
-        for (int row=0; row<rows; row++) {
+        menuBackground(x,mappingMenu.top(h),width,mappingMenu.panelHeight(h));
+        for (int row=0; row<mappingMenu.visibleRows(h); row++) {
             int index=mappingMenu.page()*rows+row;
             if (index >= options.size()) break;
-            int y=mappingMenu.top()+row*MappingMenu.ROW;
-            Gui.drawRect(x,y,x+width,y+MappingMenu.ROW-2,0xDD253747);
+            int y=mappingMenu.top(h)+row*MappingMenu.ROW;
+            if (row > 0) menuDivider(x,y,width);
             TouchLayout.Button option=options.get(index);
-            Circle.text(mc,option.label,x+width/2f,y+9,width-8,true,keys(option).isEmpty() ? 0xFF8888 : 0xECF4FA);
+            Circle.text(mc,option.label,x+MENU_PADDING,y+7,width-MENU_PADDING*2,false,keys(option).isEmpty() ? 0xFF8888 : 0xECF4FA);
         }
-        if (options.isEmpty()) Circle.text(mc,"请先在编辑器添加子选项",w/2f,48,width,true,0xFF8888);
-        int y=mappingMenu.top()+rows*MappingMenu.ROW;
-        String[] labels={"上一页", "下一页", "关闭"};
-        for (int i=0;i<3;i++) {
-            int left=x+i*width/3, right=x+(i+1)*width/3;
-            Gui.drawRect(left,y,right-2,y+MappingMenu.ROW-2,0xDD253747);
-            Circle.text(mc,labels[i],(left+right)/2f,y+9,width/3-4,true,0xECF4FA);
+        if (options.isEmpty()) Circle.text(mc,"请先添加子选项",x+MENU_PADDING,mappingMenu.top(h)+7,width-MENU_PADDING*2,false,0xFF8888);
+        int y=mappingMenu.top(h)+mappingMenu.visibleRows(h)*MappingMenu.ROW;
+        if (mappingMenu.pages(h)>1) {
+            menuDivider(x,y,width);
+            Gui.drawRect(x+width/2,y+1,x+width/2+1,y+MappingMenu.ROW-1,0xFF8298AA);
+            String[] labels={"上一页", "下一页"};
+            for (int i=0;i<2;i++) {
+                int color=(i == 0 && mappingMenu.page() == 0 || i == 1 && mappingMenu.page()+1 == mappingMenu.pages(h)) ? 0x888888 : 0xECF4FA;
+                Circle.text(mc,labels[i],x+i*width/2+MENU_PADDING,y+7,width/2-MENU_PADDING*2,false,color);
+            }
         }
-        Circle.text(mc,(mappingMenu.page()+1)+" / "+mappingMenu.pages(h),w/2f,y+MappingMenu.ROW+2,width,true,0xECF4FA);
     }
+
     private void drawMenu(int w, int h) {
         int x = menu.left(w), y = menu.top(h);
         Circle.button(x, y, GlobalTouchMenu.SIZE, 0x40253747,menu.isOpen(),false);
         for (int i=0; i<3; i++) Gui.drawRect(x+6, y+6+i*5, x+18, y+8+i*5, 0xFFE0E8EF);
         if (!menu.isOpen()) return;
-        String[] labels = {"Smart: " + (config.enabled ? "开启" : "关闭"),
-            config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
-            mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射"};
+        String[] labels = menuLabels();
+        menuBackground(menu.panelLeft(w),menu.panelTop(h),menu.panelWidth(),labels.length*GlobalTouchMenu.ROW);
         for (int i=0; i<labels.length; i++) {
             x = menu.panelLeft(w); y = menu.panelTop(h)+i*GlobalTouchMenu.ROW;
-            Circle.button(x+GlobalTouchMenu.WIDTH-GlobalTouchMenu.SIZE, y, GlobalTouchMenu.SIZE, 0x40253747, i == 0 ? config.enabled : i == 1 && config.buttonsVisible,false);
-            String icon = new String[]{"S", "V", "K"}[i];
-            Circle.text(mc,icon,x+GlobalTouchMenu.WIDTH-12,y+9,18,true,0xECF4FA);
-            Circle.text(mc,labels[i],x,y+9,GlobalTouchMenu.WIDTH-28,false,0xECF4FA);
+            if (i > 0) menuDivider(x,y,menu.panelWidth());
+            Circle.text(mc,labels[i],x+MENU_PADDING,y+7,menu.panelWidth()-MENU_PADDING*2,false,0xECF4FA);
         }
     }
     public static void drawButton(Minecraft mc, TouchLayout.Button b, int w, int h, boolean active, boolean selected) {

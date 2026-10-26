@@ -7,32 +7,49 @@ import io.github.wdy.easytouch.touch.TouchSample;
 
 /** A modal overlay: capture complete contacts and activate one option only on release. */
 public final class MappingMenu {
-    public static final int WIDTH = 220, ROW = 28;
+    public static final int ROW = GlobalTouchMenu.ROW;
     private final Map<String, Integer> contacts = new HashMap<String, Integer>();
     private final Consumer<TouchLayout.Button> action;
     private TouchLayout.Button button;
-    private int page;
+    private int page, panelWidth = 32;
+    public void panelWidth(int value) { panelWidth = value; }
+    public int panelWidth() { return panelWidth; }
     public MappingMenu(Consumer<TouchLayout.Button> action) { this.action = action; }
     public boolean isOpen() { return button != null; }
     public TouchLayout.Button button() { return button; }
     public int page() { return page; }
-    public int rows(int height) { return Math.max(1, (height-84)/ROW); }
+    public int rows(int height) {
+        int capacity=Math.max(1,(height-12)/ROW);
+        return button != null && button.options.size() > capacity ? Math.max(1,capacity-1) : capacity;
+    }
+    public int panelHeight(int height) { return (visibleRows(height)+(pages(height)>1 ? 1 : 0))*ROW; }
     public int pages(int height) { return button == null ? 1 : Math.max(1,(button.options.size()+rows(height)-1)/rows(height)); }
-    public int left(int width) { return Math.max(4, (width-WIDTH)/2); }
-    public int top() { return 36; }
+    public int left(int width) {
+        int anchor=button == null ? width-6 : button.left(width)+button.size;
+        return Math.max(6,Math.min(width-6-panelWidth,anchor-panelWidth));
+    }
+    public int visibleRows(int height) {
+        return button == null ? 1 : Math.max(1,Math.min(rows(height),button.options.size()-page*rows(height)));
+    }
+    public int top(int height) {
+        int panelHeight=panelHeight(height);
+        int anchor=button == null ? height-6 : button.top(height);
+        int y=anchor-4-panelHeight;
+        if (y < 6) y=anchor+(button == null ? 0 : button.size)+4;
+        return Math.max(6,Math.min(height-6-panelHeight,y));
+    }
     public void open(TouchLayout.Button value) { button=value; page=0; contacts.clear(); }
     public void reset() { button=null; contacts.clear(); }
     private int hit(int x, int y, int width, int height) {
-        if (button == null || x < left(width) || x >= Math.min(width-4,left(width)+WIDTH)) return -1;
-        int row=(y-top())/ROW;
-        if (y >= top() && row < rows(height)) {
+        if (button == null || x < left(width) || x >= Math.min(width-6,left(width)+panelWidth)) return -1;
+        int row=(y-top(height))/ROW;
+        if (y >= top(height) && row < visibleRows(height)) {
             int index=page*rows(height)+row;
-            return index < button.options.size() ? index : -1;
+            return index < button.options.size() ? index : -4;
         }
-        int footer=top()+rows(height)*ROW;
-        if (y >= footer && y < footer+ROW) {
-            int third=Math.min(WIDTH,width-8)/3;
-            return x < left(width)+third ? -2 : x < left(width)+third*2 ? -3 : -4;
+        int footer=top(height)+visibleRows(height)*ROW;
+        if (pages(height) > 1 && y >= footer && y < footer+ROW) {
+            return x < left(width)+panelWidth/2 ? -2 : -3;
         }
         return -1;
     }
@@ -54,7 +71,7 @@ public final class MappingMenu {
                         page=Math.max(0,Math.min(pages(height)-1,page+(hit == -2 ? -1 : 1)));
                         // Contacts begun on the previous page cannot activate the next page.
                         contacts.replaceAll((key,value) -> -1);
-                    } else button=null;
+                    }
                 }
             }
             return true;
