@@ -1,7 +1,3 @@
-key.categories.easytouch=GTNH 触屏优化
-key.easytouch.toggle=切换触摸 smart 模式
-key.easytouch.toggleTarget=切换指向目标的 smart 匹配
-key.easytouch.touchDebug=打开多点触控调试页
 easytouch.touch.title=多点触控检测
 easytouch.touch.reset=重置触点统计
 easytouch.touch.status.ready=触点监听已连接。此页面只检测输入，不执行游戏操作。
@@ -16,7 +12,6 @@ easytouch.target.disabled=已禁用同类目标的 smart：%s
 easytouch.target.unavailable=请先指向可识别类型的方块或实体。
 easytouch.target.globalOff=（已保存，smart 总开关仍关闭）
 easytouch.target.players=玩家
-key.easytouch.openTree=打开 NEI 合成树（等效 Shift+T）
 easytouch.enabled=触摸 smart：开
 easytouch.disabled=触摸 smart：关（触摸执行左键）
 easytouch.hud=交互

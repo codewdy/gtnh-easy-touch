@@ -41,6 +41,15 @@ public final class MinecraftInput implements KeyStateMerger.Port {
         }
     }
 
+    @Override public void clearCodeClicks(int code) {
+        for (KeyBinding key : mc.gameSettings.keyBindings) if (key.getKeyCode() == code) while (key.isPressed()) { }
+    }
+    @Override public int code(KeyStateMerger.Key key) { return binding(key).getKeyCode(); }
+    @Override public boolean physicalCodeDown(int code) {
+        return code < 0 ? mouseButtonDown(code + 100) : code > 0 && io.github.wdy.easytouch.layout.VirtualKeyboard.physicalDown(code);
+    }
+    @Override public void setCodeDown(int code, boolean down) { KeyBinding.setKeyBindState(code, down); }
+
     @Override public boolean physicalDown(KeyStateMerger.Key key) {
         int code = binding(key).getKeyCode();
         return code < 0 ? mouseButtonDown(code + 100) : GameSettings.isKeyDown(binding(key));

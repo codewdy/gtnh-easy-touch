@@ -2,15 +2,13 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.19 降低世界模式左侧 WASD 轮盘的不透明度，减少对视野的遮挡。统一接管 SDL 原生触摸：世界内支持轻触、静止长按和拖拽视角，GUI 内模拟普通左键点击与拖动。smart 仅影响触摸动作，真实鼠标左右键保持原版。要求 lwjgl3ify 3.0.37+ 和可用的 SDL3 后端，适配 GTNH 2.9.0 RC2 现代 Java 版。**
+**0.4.26 布局编辑、属性返回及虚拟键盘操作统一放在屏幕顶部，窄屏工具栏自动换行。统一接管 SDL 原生触摸：世界内支持轻触、静止长按和拖拽视角，GUI 内模拟普通左键点击与拖动。smart 仅影响触摸动作，真实鼠标左右键保持原版。要求 lwjgl3ify 3.0.37+ 和可用的 SDL3 后端，适配 GTNH 2.9.0 RC2 现代 Java 版。**
 
 ## 安装与使用
 
-1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.19.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.26.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 在串流软件中开启原生触点透传；模组不依赖串流软件额外模拟鼠标点击。真实鼠标或串流按键发送的左右键保持原版行为。
-3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换触摸 smart 模式”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
-4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
-5. 为“切换指向目标的 smart 匹配”绑定一个空闲键或鼠标侧键。在世界里对准方块或实体按一下，切换同类目标的匹配开关；默认未绑定。
+3. 点击右下角全局菜单切换 smart、显示/隐藏触屏按键或配置映射。本模组不再向游戏控制菜单注册快捷键。
 
 触摸 smart 默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后世界内触摸点击与长按执行攻击/挖掘，拖拽仍控制视角。开启时，命中白名单目标的触摸动作执行使用/交互。背包、机器、NEI、聊天等 GUI 内始终模拟普通鼠标左键。攻击/使用改绑后仍通过对应的游戏按键执行触摸动作。
 
@@ -18,9 +16,35 @@
 
 玩家处于潜行状态（默认按住 Shift）时，新触摸动作执行攻击/挖掘，即使目标在白名单中也不转为交互；准星旁的“交互”提示同时隐藏。依据 `player.isSneaking()` 判断。已经开始的触摸长按保持原动作，松手后才重新判断。
 
+## 自定义触屏按键
+
+点击游戏右下角的小菜单按钮，向上展开全局控制菜单；世界、背包、机器和其他 GUI 中都可使用：
+
+- **Smart: 开启/关闭**：直接切换 smart 模式，立即保存。
+- **隐藏/显示所有按键**：统一控制自定义触屏按键和 WASD 轮盘，右下角菜单按钮自身始终保留。隐藏时释放正在按住的输入；重新显示遵循各按键原有的世界/其他规则，不改写布局。开关保存在 `config/gtnheasytouch.cfg` 的 `touch.showButtons`，重启后保留。
+- **配置按键映射**：进入布局编辑器。原暂停菜单入口和“编辑触屏按键布局”快捷键已移除，仍可用 `/easytouch layout` 直接打开。
+
+菜单项在手指抬起时执行；点击外部收起菜单，该次触摸不会穿透到游戏或 GUI。菜单打开时释放当前触摸操作。布局编辑器只负责布局与单个按键属性；即使全局隐藏按键，也可在编辑器中预览和修改。
+
+- 点“新增”后打开映射，使用虚拟键盘点选一个或多个键，再点“确定”旁的圆形按钮。已选键高亮，再点一次取消；“清空”重选，“数字/导航”切换数字小键盘与导航键页。支持 Shift+T、Ctrl+R 等组合键，也支持多个普通键；选择只在确认后生效；主键盘及数字/导航页末尾的“左 / 右 / 中”对应鼠标左、右、中键，可与键盘键组合，例如 Shift+鼠标左键。清空后也可以确认保存空映射。
+- **Smart 副键**：首次使用或升级旧布局时补上一个“副”按钮，也可在虚拟键盘右上角点“副”选择该动作。它是独立动作，不能与普通键组合，默认只在世界显示；可移动、修改外观、切换按住/切换模式或删除。保存删除后不会自动补回。
+- 副键按下时与当前 smart 主动作相反：主动作交互时执行攻击，主动作攻击时执行使用。按住 Shift、潜行或 smart 关闭时执行使用/右键。沿用游戏攻击/使用绑定；按住或切换保持期间锁定动作，目标变化不会中途换键，重新激活时才重新判断。GUI 中不显示副键。
+- 新映射保存具体键码；旧的游戏功能映射仍可使用，重新编辑并确认后转为具体键码组合。按键未绑定或已移除时显示红色 `!`。
+- 触屏按钮、虚拟键盘键帽和编辑器操作按钮均为圆形，命中区域与圆形一致。外围有细环边框，按下/保持状态以绿色环高亮，编辑选中时为金色环；按钮文字缩至 80%。圆形填充和边框使用连续几何与约一个屏幕像素的透明过渡，不再按 GUI 像素画台阶；轮盘同步改用该渲染。文字仍使用 Minecraft 原有字体，仅将绘制起点对齐真实屏幕像素，保留像素字体风格。编辑器操作文字放在圆形旁边，请点击圆形；右下角菜单向上展开三个圆形操作按钮。新触屏键默认不透明度为 30%；旧布局默认的 55% 自动迁移为 30%，其他自定义透明度保留。
+- 新建按键默认大小为 24、映射为空，不再预选 Space。可修改名称、大小、不透明度和触发方式：按住触发、点击切换。旧版“点按一次”自动迁移为按住触发，已有显式 Space 映射保留。切换按住时按钮高亮，再点一次释放。
+- “世界”和“其他”独立控制显示：世界表示未打开 GUI 的游戏画面；其他表示背包、机器、NEI、聊天、菜单等 GUI。可同时开启，也可全部关闭以保留但隐藏按钮。
+- 编辑操作统一放在屏幕顶部：布局页提供新增、编辑、删除、预览、选择、保存和取消，窄屏自动换行；属性页顶部返回布局，虚拟键盘顶部切换键盘、清空、确定和取消。
+- 在布局画面点击选中并拖动位置，“编辑”修改属性，“删除”移除按钮。“选择下一个”可以选中隐藏按钮和 WASD 轮盘；轮盘支持移动、缩放、隐藏。
+- “预览”切换世界/其他布局；同一按钮在两种模式共用位置，需要不同位置时可分别新增两个按钮。按键重叠时最后新增的按钮优先。
+- 点“保存”立即生效，写入 `config/gtnheasytouch-layout.json`；“取消”或布局页 Esc 放弃草稿。首次使用会有一个“副”按钮，原轮盘保持显示。
+
+触屏按钮优先接收触点，按住后手指滑出仍归原按钮处理，松手释放，支持与轮盘和视角同时操作；按钮不向底层 GUI 发送鼠标点击。切换界面、失焦、死亡、隐藏世界 HUD 或触点重置会清理按键状态，切换按住也会重置。
+
+GUI 通过 lwjgl3ify 键盘事件队列接收组合键：先按下修饰键、再按普通键，释放时反向处理。虚拟按键状态与实体键盘状态合并，供 GUI 的 Shift/Ctrl 判断使用；多个触屏按钮共享修饰键时，最后一个按钮松开才释放。按住触发、点击切换均支持组合键；切换界面、失焦和触点重置会清理整个组合。尚未提供宏、输入法或自动连发。GUI 的 R/U 等悬停快捷键使用当前鼠标指向的物品，先触摸定位物品，再点自定义按键。
+
 ## 多点触控转发与检测
 
-使用 GTNH 现代 Java 版的 lwjgl3ify 3.x，在进入世界后执行客户端命令 **`/easytouch touch`**，或在“控制 → GTNH 触屏优化”绑定“打开多点触控调试页”（默认未绑定，使用键盘键）。命令不需要 OP，也不发送给服务器。打开页面后，用两根手指同时按住并分别移动：
+使用 GTNH 现代 Java 版的 lwjgl3ify 3.x，在进入世界后执行客户端命令 **`/easytouch touch`**。命令不需要 OP，也不发送给服务器。打开页面后，用两根手指同时按住并分别移动：
 
 - 监听状态应为“已连接”；`DOWN / MOVE / UP / CANCEL` 显示 SDL 是否启用了相应事件。
 - 绿色十字和手指编号表示 SDL 原生触点。当前触点数达到 2，且两个标记能独立移动，表示当前输入链路确实送来了独立的多指数据。抬起后当前数量应减少。
@@ -54,11 +78,11 @@ touch {
 
 原生回调可能来自其他线程，因此先复制数据进入有界队列，再于 MC 客户端 tick 发布 `MinecraftForge.EVENT_BUS` 上的 [TouchInputEvent](src/main/java/io/github/wdy/easytouch/touch/TouchInputEvent.java)。该事件不可取消，只转发数据；坐标原点在窗口左上角，通常范围为 0..1，允许边界外坐标。失焦、切换世界、队列溢出或接口错误时发布 `RESET`，消费者应清除全部按住状态。模拟鼠标触点通过 `sample.simulated()` 区分。触控代码直接使用 `SDL_Event`、`SDL_TouchFingerEvent`、`SDL_EventFilter` 和 `Display.sdlWindowId`；lwjgl3ify、LWJGL3 的 Java 绑定作为 `compileOnly` 依赖，运行时由整合包提供，不把依赖或原生库打入 mod。
 
-`TouchInput` 和 `SdlTouchSource` 使用 `@Lwjgl3Aware`，防止 lwjgl3ify 的 [LWJGL2 重定向器](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/me/eigenraven/lwjgl3ify/rfb/transformers/LwjglRedirectTransformer.java) 将 `org.lwjgl.sdl.*` 改写为不存在的 `org.lwjglx.sdl.*`。带此标记的 `TouchInput` 显式使用 `org.lwjglx.input.Keyboard` 和 `org.lwjglx.opengl.Display`；其他类仍保留正常的 LWJGL2 兼容重写。如果旧版出现上述缺类错误，替换 Easy Touch jar 即可修复这处包名错误，无需额外安装 SDL jar。
+`TouchInput` 和 `SdlTouchSource` 使用 `@Lwjgl3Aware`，防止 lwjgl3ify 的 [LWJGL2 重定向器](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/me/eigenraven/lwjgl3ify/rfb/transformers/LwjglRedirectTransformer.java) 将 `org.lwjgl.sdl.*` 改写为不存在的 `org.lwjglx.sdl.*`。带此标记的 `TouchInput` 显式使用 `org.lwjglx.input.Mouse` 和 `org.lwjglx.opengl.Display`；其他类仍保留正常的 LWJGL2 兼容重写。如果旧版出现上述缺类错误，替换 Easy Touch jar 即可修复这处包名错误，无需额外安装 SDL jar。
 
-## 指向目标切换 smart 匹配
+## 已有目标匹配覆盖规则
 
-“切换指向目标的 smart 匹配”按当前匹配结果反转：原本触摸会交互的目标改为攻击，原本不匹配的目标改为触摸交互。聊天提示显示目标名称和新状态；键盘长按重复事件不会反复切换。在 GUI、失焦、死亡或未进入世界时不处理；对空气或无法识别的目标不改写规则。
+目标匹配切换快捷键已移除；之前保存的手动规则继续生效。
 
 作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
 
@@ -66,13 +90,9 @@ touch {
 
 实体按种类识别，玩家归入同一类，不按 UUID 或自定义名称区分。同种实体的手动规则也覆盖驯服等默认条件，例如关闭狼会同时影响野狼和宠物狼。没有实体注册名时使用精确实体类名。
 
-切换匹配不改变 smart 总开关；总开关关闭时会保存规则并在提示中说明。潜行继续使用原版操作。已经开始的触摸长按保持原动作，松开后的下一次触摸动作采用新规则。
-
 ## 配方树合成按钮
 
-配置“打开 NEI 合成树（等效 Shift+T）”后，只按绑定的键即可执行对应动作：悬停物品时使用收藏配方建树；悬停 NEI 配方的爱心按钮时使用当前配方建树，即使尚未收藏该配方；悬停已有合成组标题时打开该组，不额外创建副本。按钮定位沿用当前配方组件及其滚动偏移，支持当前显示的配方变体。适用位置的操作提示同时列出新按键。
-
-新按键独立于 NEI 的 T 绑定，在背包/容器和 NEI 界面内生效；原有 Shift+T 保留。输入在 NEI 末阶段处理，搜索框文字输入优先，按住不重复新建分组；仅打开配方树，不直接开始自动合成。请选择未被其他操作占用的键盘键。
+独立的“打开 NEI 合成树（等效 Shift+T）”快捷键已移除，继续使用 NEI 自带的 Shift+T。
 
 悬停书签、右侧 NEI 物品列表、中间配方的产物/材料或背包槽位中的物品，按 **Shift+T**，即可使用该物品的收藏配方创建合成组并打开配方树。优先使用爱心手动收藏的配方，其次使用 NEI 自动收藏的配方；只有物品收藏标记、没有配方或原配方已失效时不新增合成组。匹配遵循 NEI 自己的物品、元数据、NBT 和流体规则。
 
@@ -123,7 +143,7 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 
 潘马斯类型已核对 RC2 的 [harvestcraft 1.3.15-GTNH 开发包](https://nexus.gtnewhorizons.com/repository/releases/com/github/GTNewHorizons/harvestcraft/1.3.15-GTNH/harvestcraft-1.3.15-GTNH-dev.jar)；其他作物类型核对了 [CropsNH 2.0.134](https://github.com/GTNewHorizons/CropsNH/blob/2.0.134/src/main/java/com/gtnewhorizon/cropsnh/blocks/BlockCropSticks.java)、[Natura 2.8.24](https://github.com/GTNewHorizons/Natura/blob/2.8.24/src/main/java/mods/natura/blocks/crops/CropBlock.java) 和 [IC2 2.2.828 开发包](https://maven.ic2.player.to/net/industrial-craft/industrialcraft-2/2.2.828-experimental/industrialcraft-2-2.2.828-experimental-dev.jar)。可选模组按已确认的类家族识别，不新增运行时依赖。
 
-默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可用目标快捷键另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着扳手对名单中的 GT 机器触摸执行使用，潜行触摸执行攻击。
+默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可通过 matcher 配置另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着扳手对名单中的 GT 机器触摸执行使用，潜行触摸执行攻击。
 
 GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管线宿主，并且不放行整个 `gregtech:gt.blockmachines`。AE2 使用原生 `IPartHost` 的部件选择接口，只匹配准星选中的部件，线缆或外观面板本身不触发触摸交互。模组缺失、接口不兼容、设备未同步或部件未识别时保持原版；接口异常会在日志中记录一次。兼容接口只读取状态，不执行右键或打开 GUI 来探测目标。
 
@@ -177,7 +197,7 @@ matchers {
 
 | 文件 | 职责 |
 | --- | --- |
-| [SmartTouchInput.java](src/main/java/io/github/wdy/easytouch/input/SmartTouchInput.java) | 触摸 smart 目标判定、模式/目标快捷键和准星提示 |
+| [SmartTouchInput.java](src/main/java/io/github/wdy/easytouch/input/SmartTouchInput.java) | 触摸 smart 目标判定和准星提示 |
 | [TouchLook.java](src/main/java/io/github/wdy/easytouch/input/TouchLook.java) | 世界内轻触、长按、拖拽阈值及取消 |
 | [TouchMouse.java](src/main/java/io/github/wdy/easytouch/input/TouchMouse.java) | GUI 内触摸模拟鼠标点击与拖动 |
 | [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 触摸激活时选择攻击/交互，长按期间保持动作 |
@@ -192,7 +212,7 @@ smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由�
 
 [NeiCraftingTreeInput](src/main/java/io/github/wdy/easytouch/nei/NeiCraftingTreeInput.java) 仅在客户端加载 NEI 时注册，负责配方树按钮、滚轮事件、可合成状态检查和返回原容器启动 NEI 自动合成。[NeiTreeQuantityScroll](src/main/java/io/github/wdy/easytouch/nei/NeiTreeQuantityScroll.java) 复用原生画布命中、数量规则和刷新方法，使用实时鼠标坐标适配 GUI 缩放及画布缩放、平移，不模拟 Ctrl 按键。
 
-[NeiFavoriteTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiFavoriteTreeShortcut.java) 在 NEI 的末阶段按键回调中读取悬停物品及收藏配方，调用原生 `GuiFavoriteButton.saveRecipeInBookmark()` 并打开新组。[NeiTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiTreeShortcut.java) 注册独立的单键入口，分别复用当前配方爱心按钮、已有组和物品收藏的动作；无需伪造全局 Shift/T 状态，不复制 NEI 的递归配方算法。
+[NeiFavoriteTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiFavoriteTreeShortcut.java) 在 NEI 的末阶段按键回调中读取悬停物品及收藏配方，调用原生 `GuiFavoriteButton.saveRecipeInBookmark()` 并打开新组。无需注册额外按键，也不复制 NEI 的递归配方算法。
 
 ## 按 matcher review 和扩展
 

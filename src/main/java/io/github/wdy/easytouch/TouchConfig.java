@@ -8,7 +8,9 @@ import net.minecraftforge.common.config.Property;
 
 public final class TouchConfig {
     private final Configuration file;
+    public final File layoutFile;
     public boolean enabled;
+    public boolean buttonsVisible;
     public final boolean hud;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
@@ -16,9 +18,11 @@ public final class TouchConfig {
     public final MatcherRegistry matchers;
 
     public TouchConfig(File path) {
+        layoutFile = new File(path.getParentFile(), "gtnheasytouch-layout.json");
         file = new Configuration(path);
         file.load();
         enabled = file.getBoolean("enabled", "general", true, "Enable smart target actions for native touch clicks and holds. Physical mouse buttons are unchanged.");
+        buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
         hud = file.getBoolean("showHud", "general", true, "Show Interact near the crosshair when aiming at a whitelisted target.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
@@ -39,6 +43,12 @@ public final class TouchConfig {
             file.addCustomCategoryComment("rules", "Legacy 0.1.0 rules are ignored. Edit matchers.* instead."
                 + " Held items no longer cause swapping. Entries are preserved here for reference only.");
         }
+        file.save();
+    }
+
+    public void toggleButtons() {
+        buttonsVisible = !buttonsVisible;
+        file.get("touch", "showButtons", true).set(buttonsVisible);
         file.save();
     }
 

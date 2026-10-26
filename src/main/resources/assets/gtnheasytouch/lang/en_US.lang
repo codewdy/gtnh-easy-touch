@@ -1,7 +1,3 @@
-key.categories.easytouch=GTNH Easy Touch
-key.easytouch.toggle=Toggle smart touch actions
-key.easytouch.toggleTarget=Toggle smart matching for pointed target type
-key.easytouch.touchDebug=Open multitouch diagnostics
 easytouch.touch.title=Multitouch diagnostics
 easytouch.touch.reset=Reset touch stats
 easytouch.touch.status.ready=Touch listener connected. This screen observes input without triggering gameplay actions.
@@ -16,7 +12,6 @@ easytouch.target.disabled=Smart disabled for this target type: %s
 easytouch.target.unavailable=Point at a block or entity with an identifiable type first.
 easytouch.target.globalOff= (Saved; the global smart switch is still off.)
 easytouch.target.players=Players
-key.easytouch.openTree=Open NEI crafting tree (Shift+T action)
 easytouch.enabled=Smart touch: ON
 easytouch.disabled=Smart touch: OFF (touch uses attack)
 easytouch.hud=Interact

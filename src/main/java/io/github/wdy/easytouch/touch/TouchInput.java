@@ -1,17 +1,14 @@
 package io.github.wdy.easytouch.touch;
 
-import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.eventhandler.EventPriority;
-import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import io.github.wdy.easytouch.TouchConfig;
 import io.github.wdy.easytouch.input.TouchMouse;
 import static org.lwjgl.sdl.SDLMouse.SDL_BUTTON_LMASK;
 import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.command.WrongUsageException;
@@ -21,7 +18,6 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.lwjglx.input.Keyboard;
 import org.lwjglx.input.Mouse;
 import static org.lwjgl.sdl.SDLTimer.SDL_GetTicksNS;
 import org.lwjglx.opengl.Display;
@@ -36,8 +32,6 @@ public final class TouchInput {
     private SdlTouchMouseFilter mouseFilter;
     private static final Logger LOG = LogManager.getLogger("GTNH Easy Touch");
     private final Minecraft mc = Minecraft.getMinecraft();
-    private final KeyBinding debug = new KeyBinding("key.easytouch.touchDebug", Keyboard.KEY_NONE,
-        "key.categories.easytouch");
     final TouchQueue queue = new TouchQueue(1024);
     final TouchTracker tracker = new TouchTracker();
     SdlTouchSource source;
@@ -70,15 +64,18 @@ public final class TouchInput {
     public static void install(TouchConfig config) {
         final TouchInput input = new TouchInput(config);
         installed = input;
-        ClientRegistry.registerKeyBinding(input.debug);
         MinecraftForge.EVENT_BUS.register(input);
         FMLCommonHandler.instance().bus().register(input);
         ClientCommandHandler.instance.registerCommand(new CommandBase() {
             @Override public String getCommandName() { return "easytouch"; }
-            @Override public String getCommandUsage(ICommandSender sender) { return "/easytouch touch"; }
+            @Override public String getCommandUsage(ICommandSender sender) { return "/easytouch touch|layout"; }
             @Override public int getRequiredPermissionLevel() { return 0; }
             @Override public boolean canCommandSenderUseCommand(ICommandSender sender) { return true; }
             @Override public void processCommand(ICommandSender sender, String[] args) {
+                if (args.length == 1 && "layout".equalsIgnoreCase(args[0])) {
+                    io.github.wdy.easytouch.layout.TouchButtons.instance.openRequested = true;
+                    return;
+                }
                 if (args.length != 1 || !"touch".equalsIgnoreCase(args[0])) {
                     throw new WrongUsageException(getCommandUsage(sender));
                 }
@@ -88,12 +85,10 @@ public final class TouchInput {
         });
     }
 
-    @SubscribeEvent
-    public void key(InputEvent.KeyInputEvent event) {
-        if (debug.getKeyCode() > 0 && Keyboard.getEventKeyState() && !Keyboard.isRepeatEvent()
-            && Keyboard.getEventKey() == debug.getKeyCode() && mc.currentScreen == null && Display.isActive()) {
-            openRequested = true;
-        }
+    public static boolean guiMouseHeld() { return installed != null && installed.guiMouse.held(); }
+
+    public static void cancelGuiTouch() {
+        if (installed != null) { installed.guiMouse.cancel(); installed.syncMouseButtons(); }
     }
 
     public static long nanoTime() { return installed == null ? 0 : SDL_GetTicksNS(); }
@@ -107,7 +102,8 @@ public final class TouchInput {
     private void syncMouseButtons() {
         if (mouseFilter != null && "ready".equals(status)) {
             // SDL's aggregate includes the synthetic mouse we filtered. Publish only real buttons + our GUI owner.
-            Mouse.sdlMouseButtonFlags = mouseFilter.physicalButtons() | (guiMouse.held() ? SDL_BUTTON_LMASK : 0);
+            Mouse.sdlMouseButtonFlags = mouseFilter.physicalButtons() | (guiMouse.held() ? SDL_BUTTON_LMASK : 0)
+                | io.github.wdy.easytouch.layout.TouchButtons.instance.mouseFlags();
         }
     }
 
@@ -120,7 +116,6 @@ public final class TouchInput {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
-        while (debug.isPressed()) { }
         queue.focus(Display.isActive());
         if (source != null && "ready".equals(status)
             && (source.failure() != null || mouseFilter.failure() != null)) {
@@ -134,13 +129,16 @@ public final class TouchInput {
         }
         for (TouchSample sample : queue.drain()) {
             tracker.accept(sample);
-            guiMouse.accept(sample);
-            MinecraftForge.EVENT_BUS.post(new TouchInputEvent(sample));
+            TouchInputEvent forwarded = new TouchInputEvent(sample);
+            forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
+            if (!forwarded.consumed) guiMouse.accept(sample);
+            MinecraftForge.EVENT_BUS.post(forwarded);
             if (logEvents && sample.kind != TouchSample.Kind.MOVE) {
                 LOG.info("[Touch] {} device={} finger={} simulated={} window={} x={} y={}",
                     sample.kind, sample.deviceId, sample.fingerId, sample.simulated(), sample.windowId, sample.x, sample.y);
             }
         }
+        io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
         if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
         syncMouseButtons();
         if (openRequested) {

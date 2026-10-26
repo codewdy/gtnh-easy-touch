@@ -37,7 +37,8 @@ public final class ClientInput {
 
     private ClientInput(TouchConfig config) {
         this.config = config;
-        smartTouch = new SmartTouchInput(input, config, this::cancelInputs);
+        smartTouch = new SmartTouchInput(input, config);
+        new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); }, smartTouch::touchSecondary);
         final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchPrimary);
         touchLook = new TouchLook(new TouchLook.Port() {
             public boolean inWorld() { return input.inWorld(); }
@@ -54,7 +55,6 @@ public final class ClientInput {
 
     public static void install(TouchConfig config) {
         ClientInput client = new ClientInput(config);
-        client.smartTouch.registerKey();
         MinecraftForge.EVENT_BUS.register(client);
         FMLCommonHandler.instance().bus().register(client);
     }
@@ -78,9 +78,10 @@ public final class ClientInput {
 
     @SubscribeEvent
     public void touch(TouchInputEvent event) {
+        if (event.consumed) { keys.sync(input.inWorld()); return; }
         ScaledResolution resolution = new ScaledResolution(input.mc, input.mc.displayWidth, input.mc.displayHeight);
         if (!movement.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
-                config.touchEnabled && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
+                config.touchEnabled && config.buttonsVisible && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
             touchLook.accept(event.sample);
         }
         keys.sync(input.inWorld());
@@ -88,14 +89,13 @@ public final class ClientInput {
     }
 
     @SubscribeEvent
-    public void targetKey(InputEvent.KeyInputEvent event) {
-        smartTouch.targetKeyInput();
+    public void syncKeyboard(InputEvent.KeyInputEvent event) {
         keys.sync(input.inWorld());
+        io.github.wdy.easytouch.layout.TouchButtons.instance.syncKeyboard();
     }
 
     @SubscribeEvent
-    public void targetMouse(InputEvent.MouseInputEvent event) {
-        smartTouch.targetMouseInput();
+    public void syncMouse(InputEvent.MouseInputEvent event) {
         // Vanilla has already processed this real mouse event. Preserve any independent touch hold.
         keys.sync(input.inWorld());
     }
@@ -119,11 +119,9 @@ public final class ClientInput {
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
         if (!input.inWorld()) cancelInputs();
-        if (!config.touchEnabled || input.mc.gameSettings.hideGUI) movement.cancel();
+        if (!config.touchEnabled || !config.buttonsVisible || input.mc.gameSettings.hideGUI) movement.cancel();
         if (event.phase == TickEvent.Phase.START) {
             touchLook.tick(TouchInput.nanoTime());
-        } else {
-            smartTouch.tickEnd();
         }
         keys.sync(input.inWorld());
     }
@@ -134,7 +132,7 @@ public final class ClientInput {
     @SubscribeEvent
     public void wheel(RenderGameOverlayEvent.Post event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL || !config.touchEnabled
-                || !input.inWorld() || input.mc.gameSettings.hideGUI) return;
+                || !config.buttonsVisible || !input.inWorld() || input.mc.gameSettings.hideGUI) return;
         MovementWheelHud.draw(input.mc, movement, event.resolution.getScaledWidth(),
             event.resolution.getScaledHeight());
     }

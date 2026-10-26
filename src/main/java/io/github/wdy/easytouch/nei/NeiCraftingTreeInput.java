@@ -62,7 +62,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     private final Field searchField;
     private final Field previousScreen;
     private final NeiTreeQuantityScroll quantityScroll;
-    private final NeiTreeShortcut treeShortcut;
     private boolean failed;
     private PendingCraft pending;
     private PendingDeletion pendingDeletion;
@@ -79,7 +78,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         searchField = field("searchField");
         previousScreen = field("prevGui");
         quantityScroll = new NeiTreeQuantityScroll();
-        treeShortcut = new NeiTreeShortcut();
     }
 
     private static Field field(String name) throws ReflectiveOperationException {
@@ -91,7 +89,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     public static void install() {
         try {
             NeiCraftingTreeInput input = new NeiCraftingTreeInput();
-            input.treeShortcut.registerKey();
             GuiContainerManager.addInputHandler(input);
             GuiContainerManager.addTooltipHandler(input);
             MinecraftForge.EVENT_BUS.register(input);
@@ -225,7 +222,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
                 hotkeys.put(KeyManager.getKeyName(NeiFavoriteTreeShortcut.KEY, NEIClientUtils.SHIFT_HASH),
                     I18n.format("easytouch.craftTree.favoriteShortcut"));
             }
-            treeShortcut.addHotkey(hotkeys);
             if (!isTree(gui)) return hotkeys;
             if (quantityScroll.outputUnderMouse((GuiCraftingTree) gui) != null) {
                 int wheel = NEIMouseUtils.MOUSE_BTN_NONE + NEIMouseUtils.MOUSE_SCROLL;
@@ -525,9 +521,8 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     public boolean lastKeyTyped(GuiContainer gui, char keyChar, int keyCode) {
         if (failed) return false;
         try {
-            if (treeShortcut.keyTyped(gui, keyCode)) return true;
             return NeiFavoriteTreeShortcut.open(gui, keyCode);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+        } catch (RuntimeException | LinkageError error) {
             fail(error);
             return true;
         }

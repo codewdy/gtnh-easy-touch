@@ -14,10 +14,17 @@ public final class TouchMovement {
     public TouchMovement(KeyStateMerger.Source keys) { this.keys = keys; }
 
     public static float radius(int width, int height) {
-        return Math.min(48f, Math.min(width * .18f, height * .22f));
+        return Math.min(48f, Math.min(width * .18f, height * .22f)) * layout().wheelScale;
     }
-    public static float centerX(int width, int height) { return radius(width, height) + 12; }
-    public static float centerY(int width, int height) { return height - radius(width, height) - 36; }
+    public static float centerX(int width, int height) {
+        float r = radius(width,height);
+        return layout().wheelX < 0 ? r+12 : r + layout().wheelX * Math.max(0,width-2*r);
+    }
+    public static float centerY(int width, int height) {
+        float r = radius(width,height);
+        return layout().wheelY < 0 ? height-r-36 : r + layout().wheelY * Math.max(0,height-2*r);
+    }
+    private static io.github.wdy.easytouch.layout.TouchLayout layout() { return io.github.wdy.easytouch.layout.TouchButtons.instance.layout; }
     public int horizontal() { return horizontal; }
     public int vertical() { return vertical; }
 
@@ -29,7 +36,7 @@ public final class TouchMovement {
 
     /** Returns true for contacts reserved for movement; other contacts remain available for looking. */
     public boolean accept(TouchSample sample, int w, int h, boolean enabled) {
-        if (!enabled || sample.kind == TouchSample.Kind.RESET) {
+        if (!enabled || !layout().wheelVisible || sample.kind == TouchSample.Kind.RESET) {
             cancel();
             return false;
         }
