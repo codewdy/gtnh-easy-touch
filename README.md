@@ -2,19 +2,19 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.15 修复 0.4.14 启动时 `org.lwjglx.sdl.SDLInit` 缺类崩溃：为直接调用 SDL3 的类添加 lwjgl3ify 官方兼容标记，保留正确的 SDL3 包名。要求 lwjgl3ify 3.0.37 或更新版本及可用的 SDL3 后端，缺失或初始化失败时中止加载。适配 GTNH 2.9.0 RC2 现代 Java 版。**
+**0.4.16 统一接管 SDL 原生触摸：世界内支持轻触、静止长按和拖拽视角，GUI 内模拟普通左键点击与拖动。smart 仅影响触摸动作，真实鼠标左右键保持原版。要求 lwjgl3ify 3.0.37+ 和可用的 SDL3 后端，适配 GTNH 2.9.0 RC2 现代 Java 版。**
 
 ## 安装与使用
 
-1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.15.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
-2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
-3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
+1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.16.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+2. 在串流软件中开启原生触点透传；模组不依赖串流软件额外模拟鼠标点击。真实鼠标或串流按键发送的左右键保持原版行为。
+3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换触摸 smart 模式”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
 4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
 5. 为“切换指向目标的 smart 匹配”绑定一个空闲键或鼠标侧键。在世界里对准方块或实体按一下，切换同类目标的匹配开关；默认未绑定。
 
-智能模式默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后恢复原版操作。背包、机器、NEI、聊天等 GUI 内始终保持正常鼠标语义。修改攻击/使用的鼠标绑定后，模组停止接管。
+触摸 smart 默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后世界内触摸点击与长按执行攻击/挖掘，拖拽仍控制视角。开启时，命中白名单目标的触摸动作执行使用/交互。背包、机器、NEI、聊天等 GUI 内始终模拟普通鼠标左键。攻击/使用改绑后仍通过对应的游戏按键执行触摸动作。
 
-玩家处于潜行状态（默认按住 Shift）时，新开始的鼠标按压使用原版映射：左键攻击/挖掘，右键使用/放置，即使目标在白名单中也不交换；准星旁的“交互”提示同时隐藏。统一依据 `player.isSneaking()` 判断。已经开始的长按仍保持原映射，需左右键全部松开后才按新的潜行状态判断。
+玩家处于潜行状态（默认按住 Shift）时，新触摸动作执行攻击/挖掘，即使目标在白名单中也不转为交互；准星旁的“交互”提示同时隐藏。依据 `player.isSneaking()` 判断。已经开始的触摸长按保持原动作，松手后才重新判断。
 
 ## 多点触控转发与检测
 
@@ -26,11 +26,19 @@
 - “鼠标事件”在变化而原生触点始终为 0 时，先检查上方 SDL 事件开关，再检查串流软件的触点透传；单凭这个现象不能断定 UU 的所有模式都不支持。
 - “重置触点统计”清除触点事件计数、最后事件及历史峰值，仍按住的触点继续显示；鼠标和队列丢弃数统计整个监听会话。按 Esc 或“完成”退出。
 
-这一版提供输入转发与检测，没有新增触屏摇杆、视角手势或触摸攻击操作。原来的鼠标模拟、smart 和 GUI 行为继续运行。Forge 会检查必需的 lwjgl3ify 版本；SDL3 类、原生库或窗口接口缺失及初始化失败时直接报错中止加载，不再兼容没有 SDL3 的运行环境。
+世界内由第一根原生触点控制手势，其他手指不会抢占：
 
-`config/gtnheasytouch.cfg` 的 `touch` 分类：`B:enabled=true` 默认启用转发，`B:logEvents=false` 默认不逐条记录。关闭转发仍要求 lwjgl3ify 和 SDL3 可用。需要排查时可退出游戏，把 `logEvents` 改为 `true` 后重启；日志中的 `[Touch]` 会记录按下、抬起、取消和状态清理，移动事件不刷日志。运行中的回调异常会记录错误、释放触点状态并停用转发，避免 Java 异常跨越原生回调边界。
+- 按下时先不点击；在 250ms 内松开且移动始终不超过屏幕短边的 1%，触发一次点击。
+- 移动超过短边的 1% 后进入拖拽，仅转动视角，沿用游戏鼠标灵敏度和反转设置；返回起点或松手也不补发点击。
+- 静止按住达到 500ms 后开始持续按键，松手释放；之后移动超过阈值会释放按键并进入拖拽。
+- 250～500ms 之间松开且未拖动，不触发操作。
+- 菜单、背包、机器、NEI、聊天和触点调试页中，按下立即定位鼠标并按住左键，移动可拖动，抬起释放；不应用世界内的阈值或 smart。
 
-接入方式为 SDL3 的 [`SDL_AddEventWatch`](https://wiki.libsdl.org/SDL3/SDL_AddEventWatch)：原始事件入队时复制触点数据，随后由 lwjgl3ify 原事件循环继续处理。这里利用现成的原生回调入口，没有修改 lwjgl3ify 的字节码或磁盘 jar，也不会另开一个事件轮询去抢走事件。接口按 RC2 的 [lwjgl3ify 3.0.37](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/org/lwjglx/Lwjgl3ifyEventLoop.java) 及其 LWJGL 3.4.3 依赖核对；SDL 官方提供的触点事件包含设备 ID、手指 ID、窗口 ID、时间戳、坐标、位移及压力。
+切换界面、失焦、死亡、退出世界或触点重置会取消当前手势，恢复后需重新按下。SDL 自动生成的触摸鼠标事件统一过滤，避免重复点击或双倍转向；鼠标模拟的触点不参与手势，真实鼠标不交换左右键。`touch.enabled=false` 关闭触摸接管和过滤，恢复 SDL 原有输入。
+
+`config/gtnheasytouch.cfg` 的 `touch` 分类：`B:enabled=true` 默认启用触摸接管，`B:logEvents=false` 默认不逐条记录。关闭转发仍要求 lwjgl3ify 和 SDL3 可用。需要排查时可退出游戏，把 `logEvents` 改为 `true` 后重启；日志中的 `[Touch]` 会记录按下、抬起、取消和状态清理，移动事件不刷日志。运行中的回调异常会记录错误、释放触点状态并停用转发，避免 Java 异常跨越原生回调边界。
+
+接入使用 SDL3 的 [`SDL_AddEventWatch`](https://wiki.libsdl.org/SDL3/SDL_AddEventWatch) 复制原生触点，并使用 [`SDL_SetEventFilter`](https://wiki.libsdl.org/SDL3/SDL_SetEventFilter) 过滤当前窗口中来源为 `SDL_TOUCH_MOUSEID` 的模拟鼠标事件；保留原有事件过滤器调用链。SDL 内部按下/松开状态继续更新，不在 GUI 切换时反复开关模拟功能。客户端 tick 开始时先转发触点，再执行手势判定；GUI 鼠标事件直接进入 lwjgl3ify 的鼠标队列，不回送 SDL。物理按钮单独记录，防止过滤掉的模拟左键通过底层状态恢复成按住。没有修改 lwjgl3ify 的字节码或磁盘 jar，也没有另起事件轮询。
 
 原生回调可能来自其他线程，因此先复制数据进入有界队列，再于 MC 客户端 tick 发布 `MinecraftForge.EVENT_BUS` 上的 [TouchInputEvent](src/main/java/io/github/wdy/easytouch/touch/TouchInputEvent.java)。该事件不可取消，只转发数据；坐标原点在窗口左上角，通常范围为 0..1，允许边界外坐标。失焦、切换世界、队列溢出或接口错误时发布 `RESET`，消费者应清除全部按住状态。模拟鼠标触点通过 `sample.simulated()` 区分。触控代码直接使用 `SDL_Event`、`SDL_TouchFingerEvent`、`SDL_EventFilter` 和 `Display.sdlWindowId`；lwjgl3ify、LWJGL3 的 Java 绑定作为 `compileOnly` 依赖，运行时由整合包提供，不把依赖或原生库打入 mod。
 
@@ -38,7 +46,7 @@
 
 ## 指向目标切换 smart 匹配
 
-“切换指向目标的 smart 匹配”按当前匹配结果反转：原本会交换的目标变为不交换，原本不匹配的目标变为交换。聊天提示显示目标名称和新状态；键盘长按重复事件不会反复切换。在 GUI、失焦、死亡或未进入世界时不处理；对空气或无法识别的目标不改写规则。
+“切换指向目标的 smart 匹配”按当前匹配结果反转：原本触摸会交互的目标改为攻击，原本不匹配的目标改为触摸交互。聊天提示显示目标名称和新状态；键盘长按重复事件不会反复切换。在 GUI、失焦、死亡或未进入世界时不处理；对空气或无法识别的目标不改写规则。
 
 作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
 
@@ -46,7 +54,7 @@
 
 实体按种类识别，玩家归入同一类，不按 UUID 或自定义名称区分。同种实体的手动规则也覆盖驯服等默认条件，例如关闭狼会同时影响野狼和宠物狼。没有实体注册名时使用精确实体类名。
 
-切换匹配不改变 smart 总开关；总开关关闭时会保存规则并在提示中说明。潜行继续使用原版操作。已经开始的鼠标长按保持原映射，左右键全部松开后的下一次按压采用新规则。
+切换匹配不改变 smart 总开关；总开关关闭时会保存规则并在提示中说明。潜行继续使用原版操作。已经开始的触摸长按保持原动作，松开后的下一次触摸动作采用新规则。
 
 ## 配方树合成按钮
 
@@ -80,14 +88,14 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 
 ## 默认白名单
 
-| 分类 | 默认交换的对象 |
+| 分类 | 默认触摸交互的对象 |
 | --- | --- |
 | 原版容器 | 箱子、陷阱箱、末影箱、漏斗、发射器、投掷器 |
 | 原版功能方块 | 工作台、熔炉及燃烧中的熔炉、酿造台、附魔台、铁砧、信标、床、唱片机 |
 | 床 | 原版床及其子类（包括 Et Futurum 彩色床）、Forge `isBed` 返回真的床（包括木匠床），覆盖床头/床尾和颜色变体 |
 | 作物 | `BlockCrops` 及其子类（小麦、胡萝卜、马铃薯和潘马斯全部田间作物）、瓜茎、地狱疣、可可；潘马斯果实和可采收树干、CropsNH／IC2 作物架、Natura 大麦/棉花及主世界/下界浆果丛；覆盖所有生长阶段 |
 | 开关与机关 | 木门、活板门、栅栏门、按钮、拉杆、中继器和比较器（包括通电状态） |
-| 生物 | 村民、牛、蘑菇牛、羊、猪、鸡、马/驴/骡；狼和猫仅在已驯服时交换 |
+| 生物 | 村民、牛、蘑菇牛、羊、猪、鸡、马/驴/骡；狼和猫仅在已驯服时触摸交互 |
 | 载具及装饰 | 船、普通矿车、运输矿车、漏斗矿车、物品展示框 |
 | Iron Chests | `IronChest:BlockIronChest` 的箱子变体 |
 | 匠魂 | 合成站/半砖合成站、工具装配站/装配台、零件加工台、模具桌；工作台按元数据区分 |
@@ -99,15 +107,15 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 
 床在 smart 模式下左键交互、右键拆除；潜行时仍保留原版鼠标映射。新增床规则按 `BlockBed` 类型和 Forge 的 `isBed` 查询识别，不靠名称包含 `bed`，也不受颜色或注册名变化影响。已核对 RC2 所带的 [Et Futurum 2.6.60-GTNH 彩色床](https://github.com/GTNewHorizons/Et-Futurum-Requiem/blob/2.6.60-GTNH/src/main/java/ganymedes01/etfuturum/blocks/BlockDyedBed.java) 和 [Carpenter's Blocks 3.7.3-GTNH 木匠床](https://github.com/GTNewHorizons/CarpentersBlocks/blob/3.7.3-GTNH/src/main/java/com/carpentersblocks/block/BlockCarpentersBed.java)。只查询当前指向方块的床属性，不调用交互或睡眠逻辑来探测。
 
-作物在 smart 下左键执行原来的右键交互，可直接收获原模组支持右键收获的成熟作物；右键执行原来的左键操作，潜行仍保留原版映射。幼苗、未成熟和刚收获后的作物也保持交换，避免成熟度改变下一次按压的含义。只读取方块类型，不探测交互、不修改成熟度或掉落，也不为原本没有右键收获的瓜茎、地狱疣等作物新增收获机制。
+作物在 smart 下触摸执行使用/交互，可收获原模组支持右键收获的成熟作物；潜行时触摸执行攻击。幼苗、未成熟和刚收获后的作物也保持触摸交互，避免成熟度改变下一次操作的含义。只读取方块类型，不探测交互、不修改成熟度或掉落，也不为原本没有右键收获的瓜茎、地狱疣等作物新增收获机制。
 
 潘马斯类型已核对 RC2 的 [harvestcraft 1.3.15-GTNH 开发包](https://nexus.gtnewhorizons.com/repository/releases/com/github/GTNewHorizons/harvestcraft/1.3.15-GTNH/harvestcraft-1.3.15-GTNH-dev.jar)；其他作物类型核对了 [CropsNH 2.0.134](https://github.com/GTNewHorizons/CropsNH/blob/2.0.134/src/main/java/com/gtnewhorizon/cropsnh/blocks/BlockCropSticks.java)、[Natura 2.8.24](https://github.com/GTNewHorizons/Natura/blob/2.8.24/src/main/java/mods/natura/blocks/crops/CropBlock.java) 和 [IC2 2.2.828 开发包](https://maven.ic2.player.to/net/industrial-craft/industrialcraft-2/2.2.828-experimental/industrialcraft-2-2.2.828-experimental-dev.jar)。可选模组按已确认的类家族识别，不新增运行时依赖。
 
-默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可用目标快捷键另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发交换。例如：拿着方块对石头仍是左键挖掘、右键放置；拿着扳手对名单中的 GT 机器则是左键使用、右键拆卸。
+默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可用目标快捷键另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着扳手对名单中的 GT 机器触摸执行使用，潜行触摸执行攻击。
 
-GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管线宿主，并且不放行整个 `gregtech:gt.blockmachines`。AE2 使用原生 `IPartHost` 的部件选择接口，只匹配准星选中的部件，线缆或外观面板本身不触发交换。模组缺失、接口不兼容、设备未同步或部件未识别时保持原版；接口异常会在日志中记录一次。兼容接口只读取状态，不执行右键或打开 GUI 来探测目标。
+GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管线宿主，并且不放行整个 `gregtech:gt.blockmachines`。AE2 使用原生 `IPartHost` 的部件选择接口，只匹配准星选中的部件，线缆或外观面板本身不触发触摸交互。模组缺失、接口不兼容、设备未同步或部件未识别时保持原版；接口异常会在日志中记录一次。兼容接口只读取状态，不执行右键或打开 GUI 来探测目标。
 
-一次按压开始时锁定映射，直到左右键**全部松开**才重新判断。挖掘过程中移向白名单目标不会突然交换；同时按两键仍保持相反操作。打开 GUI、失焦、死亡、切换世界或切换模式时清理输入，返回世界需先松开再按。挖掘、吃东西、放置和拉弓仍由游戏原有逻辑处理，本模组不直接发送攻击或破坏数据包。
+触摸长按开始执行时锁定动作，松手或转为拖拽时释放。长按过程中改变准星目标或目标规则不会切换动作。打开 GUI、失焦、死亡、切换世界或切换 smart 模式时清理触摸输入，返回后需重新按下。实际挖掘和交互由游戏原有逻辑执行，本模组不直接发送攻击或破坏数据包。
 
 ## 配置 matcher
 
@@ -153,16 +161,18 @@ matchers {
 
 ## 输入功能的代码划分
 
-[ClientInput](src/main/java/io/github/wdy/easytouch/ClientInput.java) 只负责注册、事件转发和 GUI/失焦/世界切换等共同清理时机。鼠标输入逻辑放在 [input/](src/main/java/io/github/wdy/easytouch/input/)：
+[ClientInput](src/main/java/io/github/wdy/easytouch/ClientInput.java) 只负责注册、事件转发和 GUI/失焦/世界切换等共同清理时机。触摸输入逻辑放在 [input/](src/main/java/io/github/wdy/easytouch/input/)：
 
 | 文件 | 职责 |
 | --- | --- |
-| [SmartMouseInput.java](src/main/java/io/github/wdy/easytouch/input/SmartMouseInput.java) | smart 鼠标交换、模式/目标开关快捷键和准星提示 |
-| [MouseGesture.java](src/main/java/io/github/wdy/easytouch/input/MouseGesture.java) | 普通鼠标按压、双键重叠和映射锁定 |
+| [SmartTouchInput.java](src/main/java/io/github/wdy/easytouch/input/SmartTouchInput.java) | 触摸 smart 目标判定、模式/目标快捷键和准星提示 |
+| [TouchLook.java](src/main/java/io/github/wdy/easytouch/input/TouchLook.java) | 世界内轻触、长按、拖拽阈值及取消 |
+| [TouchMouse.java](src/main/java/io/github/wdy/easytouch/input/TouchMouse.java) | GUI 内触摸模拟鼠标点击与拖动 |
+| [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 触摸激活时选择攻击/交互，长按期间保持动作 |
 | [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 攻击/使用按键的状态合并、一次点击和队列清理 |
 | [MinecraftInput.java](src/main/java/io/github/wdy/easytouch/input/MinecraftInput.java) | Minecraft 环境判断和底层按键读写 |
 
-[touch/](src/main/java/io/github/wdy/easytouch/touch/) 包含独立的原始触点管线：`SdlTouchSource` 管理 SDL 回调及原始字段复制，`TouchQueue` 负责跨线程传递与状态清理，`TouchTracker` 维护多指状态，`TouchInput` 在客户端线程发布事件并注册检测入口，`TouchDebugScreen` 显示检测结果。该管线不接管攻击/使用按键。
+[touch/](src/main/java/io/github/wdy/easytouch/touch/) 包含独立的原始触点管线：`SdlTouchSource` 管理 SDL 回调及原始字段复制，`TouchQueue` 负责跨线程传递与状态清理，`TouchTracker` 维护多指状态，`TouchInput` 在客户端线程发布事件并注册检测入口，`TouchDebugScreen` 显示检测结果。`SdlTouchMouseFilter` 过滤自动生成的模拟鼠标事件并记录物理按钮，`GuiTouchMouse` 注入 GUI 鼠标事件；世界内触摸动作由 `ClientInput` 接入按键合并层。
 
 smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由底层统一写入 Minecraft。结束接管时恢复当前物理按键状态，进入 GUI 或切换模式时由入口清理正在进行的输入和待执行点击。
 
@@ -252,13 +262,13 @@ registry 先检查手动目标规则；没有对应的强制允许/禁用时，�
 
 使用 Java 25 执行 `./gradlew build`（Windows：`gradlew.bat build`）。Gradle 自动获取编译所需的 Java 8；产物使用 Java 8 字节码，但运行环境仍需满足 lwjgl3ify 和 SDL3 的要求，请使用 GTNH 现代 Java 版。
 
-`./gradlew sdlTest` 单独运行真实 SDL3 回调集成测试，使用与 RC2 相同的 LWJGL 3.4.3，在隔离类路径和 Java 25 中加载对应平台原生库；这些测试依赖不进入普通 Minecraft/LWJGL2 测试运行环境或产物。测试通过 `SDL_PushEvent` 注入两指、移动、抬起、取消和焦点事件，验证直接回调实际可调用、字段独立复制、原队列未被消费、鼠标模拟识别、窗口过滤、注销及异常处理。另使用 lwjgl3ify 3.0.37 的真实重定向器验证 SDL3 引用保持原包名、键盘/窗口使用正确兼容类、普通鼠标控制仍会正常重写，并通过移除兼容标记复现旧版错误包名。它不依赖显示器或触摸硬件，也不能代替完整 GTNH 客户端和 UU 的触点透传实测。0.4.13 的触摸反馈已获用户实测确认；0.4.15 的修复仍需在客户端复测。
+`./gradlew sdlTest` 单独运行真实 SDL3 回调集成测试，使用与 RC2 相同的 LWJGL 3.4.3，在隔离类路径和 Java 25 中加载对应平台原生库；这些测试依赖不进入普通 Minecraft/LWJGL2 测试运行环境或产物。测试通过 `SDL_PushEvent` 注入两指、移动、抬起、取消和焦点事件，验证直接回调实际可调用、字段独立复制、原队列未被消费、鼠标模拟识别、窗口过滤、注销及异常处理。另使用 lwjgl3ify 3.0.37 的真实重定向器验证 SDL3 引用保持原包名、键盘/窗口使用正确兼容类、快捷键鼠标输入仍会正常重写，并通过移除兼容标记复现旧版错误包名。它不依赖显示器或触摸硬件，也不能代替完整 GTNH 客户端和 UU 的触点透传实测。0.4.13 的触摸反馈已获用户实测确认；0.4.16 的手势、GUI 点击与真实鼠标兼容仍需在客户端实测。
 
 普通单元测试覆盖设备/手指双重标识、模拟触点单独计数、失焦与恢复、无按下的移动事件、队列溢出、跨线程收发、异常坐标、配置持久化，以及缺失 SDL 依赖时立即抛错。触点监听代码通过正常构建直接检查 API 类型和签名。
 
-`./gradlew test` 覆盖长按锁定、双键重叠、各 matcher 的目标判断、宠物驯服条件、旧配置迁移与空列表持久化、GT 宿主和 AE2 部件选择。扩展测试验证新增命中面/高度条件无需修改核心代码；合并测试验证 100 个简单 matcher 在命中和未命中时均只读取一次所需的目标字段，并覆盖嵌套组合、独立禁用、后续注册和合并后的驯服优先级。可选模组接口测试使用测试替身，不代表已在完整整合包中验证兼容性。
+`./gradlew test` 覆盖触摸长按动作锁定、各 matcher 的目标判断、宠物驯服条件、旧配置迁移与空列表持久化、GT 宿主和 AE2 部件选择。扩展测试验证新增命中面/高度条件无需修改核心代码；合并测试验证 100 个简单 matcher 在命中和未命中时均只读取一次所需的目标字段，并覆盖嵌套组合、独立禁用、后续注册和合并后的驯服优先级。可选模组接口测试使用测试替身，不代表已在完整整合包中验证兼容性。
 
-按键层测试覆盖交换后不重复触发原生右键、退出接管时恢复当前物理按键，以及进入 GUI 时清除待执行点击和按住状态。
+手势测试覆盖 250ms/500ms 时间边界、短边 1% 移动阈值、拖回原点、长按转拖拽、多指归属和状态取消；GUI 测试覆盖立即按下、移动和释放。按键层验证触摸动作不交换物理左右键，触摸释放后恢复真实按键状态。SDL 测试验证自动模拟鼠标被过滤、真实鼠标与原生触点通过、设备状态合并及前置过滤器恢复。
 
 目标开关测试覆盖覆盖默认允许、启用未知目标、再次切换、重读配置、总开关独立、同方块不同机器/部件变体、忽略位置/朝向/数量/自定义 NBT、同类实体覆盖驯服条件、无法选取物品的回退、空命中不写入、手动列表冲突、按目标种类跳过无关查询和长按期间的映射锁定。GT/AE2 的测试使用等效选取结果，真实部件仍需整合包实测。
 
@@ -271,15 +281,10 @@ registry 先检查手动目标规则；没有对应的强制允许/禁用时，�
 实际 GTNH / UU 环境仍需实测：
 
 - 执行 `/easytouch touch`，确认监听连接及 SDL 事件启用状态；UU 中两指同时按住并分别移动，观察独立编号和原生触点数量，逐个松手归零。切出窗口再返回、退出世界及重新进入后不残留按住状态；鼠标模拟事件不会计作原生多指。检查 GUI 缩放、高 DPI、横竖屏/窗口尺寸变化后的标记位置。
-- 石头左键挖掘；箱子左键打开、右键拆除；按住过程中移向另一类目标不会交换。
-- 绑定“切换指向目标的 smart 匹配”，对箱子、石头、GT 设备、AE2 面板/线缆及实体逐个切换，检查同类生效、不同变体独立、提示及重启持久化；长按键不反复切换，GUI/失焦不修改，鼠标长按松开后才采用新映射。
-- 原版床、不同颜色 Et Futurum 床和不同外观木匠床的床头/床尾均显示交互并交换鼠标；潜行保留原操作，基岩及普通装饰方块不交换。
-- 对小麦、不同潘马斯作物、树上果实/可采收树干、CropsNH 作物架、Natura 大麦/棉花/浆果左键执行原生右键收获；未成熟与收获后仍显示交互，右键执行原来的左键操作。检查潜行、目标手动禁用、原模组收获配置及关闭 `matchers.crops` 后的行为；普通花草树苗不交换。
-- 对僵尸和玩家保持原版，对牛和村民交换；野狼不交换，已驯服的狼交换。
-- GT 加工机、控制器和仓/舱交换，机器外壳和管线不交换。
-- 同一格 AE 线缆上的终端面板交换，指向线缆本身不交换。
-- 拿着食物、桶、建筑方块或弓对准空气/普通方块仍使用原版左右键。
-- 背包/机器/NEI 的拿取、拆分、拖动，以及失焦、死亡、退出世界后的输入清理。
+- 世界内快速轻触石头执行一次攻击；按住 500ms 开始挖掘；超过短边 1% 的拖拽只转向。长按后拖动立即停止挖掘，返回起点不补点；250～500ms 松手无动作。
+- 触摸箱子、床、作物、GT 设备和 AE2 面板时按 smart 规则交互，潜行或关闭 smart 后触摸执行攻击。真实鼠标左键始终攻击，右键始终使用；鼠标与触摸同时操作也不应交换物理按钮。
+- 手动切换目标规则后，当前触摸长按保持原动作，下一次触摸按新规则执行；检查分类型匹配、持久化与 HUD。
+- 菜单、背包、机器、NEI、聊天和调试页触摸立即模拟左键；检查拿取、拖动、松手及 GUI 缩放/高 DPI 的定位。切换界面、失焦、死亡或退出世界后不残留按键。
 - 从工作台打开配方树，两个按钮均返回工作台并按分组数量合成，已有成品仍可再合成一批；控制设置中不再出现本模组的配方树合成快捷键。
 - 分别悬停书签、右侧物品列表、配方产物/材料和背包槽位，Shift+T 按收藏配方新建并打开合成树；无配方、只收藏物品、失效配方不新建组。检查手动收藏优先、自动收藏回退、搜索框输入、长按不重复、改绑 NEI 打开合成树按键，以及原生收藏按钮/组标题不会额外创建第二组。
 - 在控制菜单绑定“打开 NEI 合成树（等效 Shift+T）”并重启确认保存；无需 Shift 分别测试收藏物品、未收藏配方的爱心按钮、滚动后的爱心按钮、折叠/展开的合成组标题。组标题只打开原组，按住不重复新建，搜索框仍输入原字符，旧 Shift+T 仍有效。

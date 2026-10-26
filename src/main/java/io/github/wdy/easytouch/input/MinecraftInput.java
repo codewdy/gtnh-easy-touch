@@ -16,6 +16,19 @@ public final class MinecraftInput implements KeyStateMerger.Port {
             && mc.inGameHasFocus && Display.isActive() && !mc.thePlayer.isDead;
     }
 
+    public void turn(float dx, float dy) {
+        if (!inWorld()) return;
+        float sensitivity = mc.gameSettings.mouseSensitivity * 0.6F + 0.2F;
+        float scale = sensitivity * sensitivity * sensitivity * 8.0F;
+        // SDL Y grows downwards; setAngles expects upwards-positive mouse movement.
+        mc.thePlayer.setAngles(dx * mc.displayWidth * scale,
+            dy * mc.displayHeight * scale * (mc.gameSettings.invertMouse ? 1 : -1));
+    }
+
+    public boolean mouseButtonDown(int button) {
+        return io.github.wdy.easytouch.touch.TouchInput.mouseButtonDown(button);
+    }
+
     private KeyBinding binding(KeyStateMerger.Key key) {
         switch (key) {
             case ATTACK: return mc.gameSettings.keyBindAttack;
@@ -25,7 +38,8 @@ public final class MinecraftInput implements KeyStateMerger.Port {
     }
 
     @Override public boolean physicalDown(KeyStateMerger.Key key) {
-        return GameSettings.isKeyDown(binding(key));
+        int code = binding(key).getKeyCode();
+        return code < 0 ? mouseButtonDown(code + 100) : GameSettings.isKeyDown(binding(key));
     }
 
     @Override public void setDown(KeyStateMerger.Key key, boolean down) {

@@ -16,10 +16,10 @@ public final class TouchConfig {
     public TouchConfig(File path) {
         file = new Configuration(path);
         file.load();
-        enabled = file.getBoolean("enabled", "general", true, "Enable adaptive mouse buttons.");
+        enabled = file.getBoolean("enabled", "general", true, "Enable smart target actions for native touch clicks and holds. Physical mouse buttons are unchanged.");
         hud = file.getBoolean("showHud", "general", true, "Show Interact near the crosshair when aiming at a whitelisted target.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
-            "Forward native SDL3 touch events. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
+            "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
         touchLogEvents = file.getBoolean("logEvents", "touch", false,
             "Log touch down/up/cancel/reset events for diagnostics. Motion events are not logged.");
         LegacyWhitelistMigration.apply(file);

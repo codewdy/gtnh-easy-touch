@@ -2,7 +2,11 @@ package io.github.wdy.easytouch;
 
 import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.MinecraftInput;
-import io.github.wdy.easytouch.input.SmartMouseInput;
+import io.github.wdy.easytouch.input.SmartTouchInput;
+import io.github.wdy.easytouch.input.TouchLook;
+import io.github.wdy.easytouch.touch.TouchInputEvent;
+import io.github.wdy.easytouch.touch.TouchInput;
+import io.github.wdy.easytouch.input.TouchActions;
 import io.github.wdy.easytouch.nei.NeiCraftingTreeInput;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.FMLLog;
@@ -13,7 +17,6 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.GuiOpenEvent;
-import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
@@ -23,15 +26,27 @@ import org.apache.logging.log4j.Level;
 public final class ClientInput {
     private final MinecraftInput input = new MinecraftInput(Minecraft.getMinecraft());
     private final KeyStateMerger keys = new KeyStateMerger(input);
-    private final SmartMouseInput smartMouse;
+    private final SmartTouchInput smartTouch;
+    private final TouchLook touchLook;
+    private final KeyStateMerger.Source touchKeys = keys.newSource();
 
     private ClientInput(TouchConfig config) {
-        smartMouse = new SmartMouseInput(input, config, keys.newSource(), this::cancelInputs);
+        smartTouch = new SmartTouchInput(input, config, this::cancelInputs);
+        final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchPrimary);
+        touchLook = new TouchLook(new TouchLook.Port() {
+            public boolean inWorld() { return input.inWorld(); }
+            public int width() { return input.mc.displayWidth; }
+            public int height() { return input.mc.displayHeight; }
+            public void turn(float dx, float dy) { input.turn(dx, dy); }
+            public void click() { actions.click(); }
+            public void press() { actions.press(); }
+            public void release() { actions.release(); }
+        });
     }
 
     public static void install(TouchConfig config) {
         ClientInput client = new ClientInput(config);
-        client.smartMouse.registerKey();
+        client.smartTouch.registerKey();
         MinecraftForge.EVENT_BUS.register(client);
         FMLCommonHandler.instance().bus().register(client);
     }
@@ -47,20 +62,24 @@ public final class ClientInput {
     }
 
     private void cancelInputs() {
-        smartMouse.cancel();
+        touchLook.cancel();
+        touchKeys.clear();
         keys.discardClicks();
     }
 
     @SubscribeEvent
-    public void targetKey(InputEvent.KeyInputEvent event) { smartMouse.targetKeyInput(); }
+    public void touch(TouchInputEvent event) {
+        touchLook.accept(event.sample);
+        if (event.sample.kind == io.github.wdy.easytouch.touch.TouchSample.Kind.RESET) touchKeys.clear();
+    }
 
     @SubscribeEvent
-    public void targetMouse(InputEvent.MouseInputEvent event) { smartMouse.targetMouseInput(); }
+    public void targetKey(InputEvent.KeyInputEvent event) { smartTouch.targetKeyInput(); }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void mouse(MouseEvent event) {
-        if (!input.inWorld()) cancelInputs();
-        else smartMouse.mouse(event);
+    @SubscribeEvent
+    public void targetMouse(InputEvent.MouseInputEvent event) {
+        smartTouch.targetMouseInput();
+        // Vanilla has already processed this real mouse event. Preserve any independent touch hold.
         keys.sync(input.inWorld());
     }
 
@@ -84,13 +103,13 @@ public final class ClientInput {
     public void tick(TickEvent.ClientTickEvent event) {
         if (!input.inWorld()) cancelInputs();
         if (event.phase == TickEvent.Phase.START) {
-            smartMouse.tickStart();
+            touchLook.tick(TouchInput.nanoTime());
         } else {
-            smartMouse.tickEnd();
+            smartTouch.tickEnd();
         }
         keys.sync(input.inWorld());
     }
 
     @SubscribeEvent
-    public void hud(RenderGameOverlayEvent.Text event) { smartMouse.hud(event); }
+    public void hud(RenderGameOverlayEvent.Text event) { smartTouch.hud(event); }
 }

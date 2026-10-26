@@ -19,7 +19,7 @@ public final class CropMatcher implements TargetMatcher {
     public CropMatcher(MatcherSettings settings) {
         standardCrops = settings.flag("standardCrops", true,
             "Match BlockCrops (including Pam's crops), stems, nether wart and cocoa, at every growth stage. "
-                + "This only swaps buttons; it does not add right-click harvesting.");
+                + "This only selects the touch action; it does not add right-click harvesting.");
         classes = settings.strings("classes", "Additional crop block class families, including subclasses. "
                 + "These optional mods do not need to be installed.",
             "com.pam.harvestcraft.BlockPamFruit",

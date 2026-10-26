@@ -50,7 +50,7 @@ public class LwjglRedirectCompatibilityTest {
     }
 
     @Test public void sdlCallsKeepTheirRealPackageAfterTheRuntimeTransformer() throws Exception {
-        for (String simpleName : new String[] { "TouchInput", "SdlTouchSource" }) {
+        for (String simpleName : new String[] { "TouchInput", "SdlTouchSource", "SdlTouchMouseFilter", "GuiTouchMouse" }) {
             String name = ROOT + "touch." + simpleName;
             byte[] original = classBytes(name);
             ClassNodeHandle handle = new ClassNodeHandle(original);
@@ -84,8 +84,8 @@ public class LwjglRedirectCompatibilityTest {
         assertTrue(references(handle.computeBytes()).contains("org/lwjglx/sdl/SDLInit"));
     }
 
-    @Test public void ordinaryMouseControlsStillReceiveLegacyRedirection() throws Exception {
-        String name = ROOT + "input.SmartMouseInput";
+    @Test public void shortcutInputStillReceivesLegacyRedirection() throws Exception {
+        String name = ROOT + "input.SmartTouchInput";
         ClassNodeHandle handle = new ClassNodeHandle(classBytes(name));
         assertTrue(redirect(name, handle));
         Set<String> names = references(handle.computeBytes());

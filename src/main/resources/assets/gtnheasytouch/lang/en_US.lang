@@ -1,5 +1,5 @@
 key.categories.easytouch=GTNH Easy Touch
-key.easytouch.toggle=Toggle adaptive mouse buttons
+key.easytouch.toggle=Toggle smart touch actions
 key.easytouch.toggleTarget=Toggle smart matching for pointed target type
 key.easytouch.touchDebug=Open multitouch diagnostics
 easytouch.touch.title=Multitouch diagnostics
@@ -17,8 +17,8 @@ easytouch.target.unavailable=Point at a block or entity with an identifiable typ
 easytouch.target.globalOff= (Saved; the global smart switch is still off.)
 easytouch.target.players=Players
 key.easytouch.openTree=Open NEI crafting tree (Shift+T action)
-easytouch.enabled=Easy Touch: ON
-easytouch.disabled=Easy Touch: OFF (vanilla controls)
+easytouch.enabled=Smart touch: ON
+easytouch.disabled=Smart touch: OFF (touch uses attack)
 easytouch.hud=Interact
 easytouch.craftTree.buttonRemove=Craft & delete
 easytouch.craftTree.buttonKeep=Craft only

@@ -3,7 +3,10 @@ package io.github.wdy.easytouch;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Map;
-import io.github.wdy.easytouch.input.MouseGesture;
+import io.github.wdy.easytouch.input.TouchActions;
+import io.github.wdy.easytouch.input.KeyStateMerger;
+import io.github.wdy.easytouch.input.KeyStateMerger.Key;
+import java.util.EnumSet;
 import io.github.wdy.easytouch.matching.MatcherRegistry;
 import io.github.wdy.easytouch.matching.TargetIdentity;
 import net.minecraft.item.Item;
@@ -183,15 +186,27 @@ public class TargetToggleTest extends MatcherTestSupport {
     }
 
     @Test
-    public void changingRuleDoesNotFlipAnOngoingMouseGesture() throws Exception {
+    public void changingRuleDoesNotFlipAnOngoingTouchHold() throws Exception {
         MatcherRegistry rules = MatcherRegistry.builtIns(configuration());
         TestTarget target = picked("minecraft:chest", 0, 0, 0);
-        MouseGesture gesture = new MouseGesture();
-        assertEquals(Action.USE, gesture.press(0, rules.matches(target) ? Action.USE : Action.ATTACK));
+        final EnumSet<Key> down = EnumSet.noneOf(Key.class);
+        KeyStateMerger merger = new KeyStateMerger(new KeyStateMerger.Port() {
+            public boolean physicalDown(Key key) { return false; }
+            public void setDown(Key key, boolean held) { if (held) down.add(key); else down.remove(key); }
+            public void click(Key key) { }
+            public void clearClicks(Key key) { }
+        });
+        TouchActions actions = new TouchActions(merger.newSource(),
+            () -> rules.matches(target) ? Action.USE : Action.ATTACK);
+        actions.press();
+        merger.sync(true);
+        assertEquals(EnumSet.of(Key.USE), down);
         rules.toggleTarget(target);
-        assertEquals(Action.ATTACK, gesture.press(1, rules.matches(target) ? Action.USE : Action.ATTACK));
-        gesture.release(0);
-        gesture.release(1);
-        assertEquals(Action.ATTACK, gesture.press(0, rules.matches(target) ? Action.USE : Action.ATTACK));
+        merger.sync(true);
+        assertEquals(EnumSet.of(Key.USE), down);
+        actions.release();
+        actions.press();
+        merger.sync(true);
+        assertEquals(EnumSet.of(Key.ATTACK), down);
     }
 }

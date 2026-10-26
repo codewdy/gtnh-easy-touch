@@ -10,7 +10,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
 
-/** Target facts and full game context. This extracts data; it never decides which targets may swap. */
+/** Target facts and full game context. This extracts data; it never decides which targets use smart touch interaction. */
 public interface TargetContext {
     World world();
     EntityPlayer player();

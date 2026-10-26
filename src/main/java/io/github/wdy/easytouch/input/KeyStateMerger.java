@@ -16,7 +16,7 @@ public final class KeyStateMerger {
         void clearClicks(Key key);
     }
 
-    private enum Request { OVERRIDE_DOWN, OVERRIDE_UP }
+    private enum Request { OVERRIDE_DOWN, OVERRIDE_UP, HOLD_DOWN }
 
     private final Port port;
     private final List<Source> sources = new ArrayList<Source>();
@@ -38,7 +38,7 @@ public final class KeyStateMerger {
                 Request request = source.requests.get(key);
                 if (request == null) continue;
                 requested = true;
-                held |= request == Request.OVERRIDE_DOWN;
+                held |= request != Request.OVERRIDE_UP;
             }
             if (requested) {
                 port.setDown(key, inWorld && held);
@@ -78,6 +78,9 @@ public final class KeyStateMerger {
         public void override(Key key, boolean down) {
             requests.put(key, down ? Request.OVERRIDE_DOWN : Request.OVERRIDE_UP);
         }
+
+        /** Add a held key without overriding the mouse source's mapping. */
+        public void hold(Key key) { requests.put(key, Request.HOLD_DOWN); }
 
         public void release(Key key) { requests.remove(key); }
 
