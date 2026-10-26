@@ -33,6 +33,10 @@ public final class MinecraftInput implements KeyStateMerger.Port {
         switch (key) {
             case ATTACK: return mc.gameSettings.keyBindAttack;
             case USE: return mc.gameSettings.keyBindUseItem;
+            case FORWARD: return mc.gameSettings.keyBindForward;
+            case BACK: return mc.gameSettings.keyBindBack;
+            case LEFT: return mc.gameSettings.keyBindLeft;
+            case RIGHT: return mc.gameSettings.keyBindRight;
             default: throw new AssertionError(key);
         }
     }

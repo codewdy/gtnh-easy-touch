@@ -4,6 +4,9 @@ import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.MinecraftInput;
 import io.github.wdy.easytouch.input.SmartTouchInput;
 import io.github.wdy.easytouch.input.TouchLook;
+import io.github.wdy.easytouch.input.TouchMovement;
+import io.github.wdy.easytouch.input.MovementWheelHud;
+import net.minecraft.client.gui.ScaledResolution;
 import io.github.wdy.easytouch.touch.TouchInputEvent;
 import io.github.wdy.easytouch.touch.TouchInput;
 import io.github.wdy.easytouch.input.TouchActions;
@@ -26,11 +29,14 @@ import org.apache.logging.log4j.Level;
 public final class ClientInput {
     private final MinecraftInput input = new MinecraftInput(Minecraft.getMinecraft());
     private final KeyStateMerger keys = new KeyStateMerger(input);
+    private final TouchMovement movement = new TouchMovement(keys.newSource());
+    private final TouchConfig config;
     private final SmartTouchInput smartTouch;
     private final TouchLook touchLook;
     private final KeyStateMerger.Source touchKeys = keys.newSource();
 
     private ClientInput(TouchConfig config) {
+        this.config = config;
         smartTouch = new SmartTouchInput(input, config, this::cancelInputs);
         final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchPrimary);
         touchLook = new TouchLook(new TouchLook.Port() {
@@ -65,18 +71,27 @@ public final class ClientInput {
 
     private void cancelInputs() {
         touchLook.cancel();
+        movement.cancel();
         touchKeys.clear();
         keys.discardClicks();
     }
 
     @SubscribeEvent
     public void touch(TouchInputEvent event) {
-        touchLook.accept(event.sample);
+        ScaledResolution resolution = new ScaledResolution(input.mc, input.mc.displayWidth, input.mc.displayHeight);
+        if (!movement.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
+                config.touchEnabled && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
+            touchLook.accept(event.sample);
+        }
+        keys.sync(input.inWorld());
         if (event.sample.kind == io.github.wdy.easytouch.touch.TouchSample.Kind.RESET) touchKeys.clear();
     }
 
     @SubscribeEvent
-    public void targetKey(InputEvent.KeyInputEvent event) { smartTouch.targetKeyInput(); }
+    public void targetKey(InputEvent.KeyInputEvent event) {
+        smartTouch.targetKeyInput();
+        keys.sync(input.inWorld());
+    }
 
     @SubscribeEvent
     public void targetMouse(InputEvent.MouseInputEvent event) {
@@ -104,6 +119,7 @@ public final class ClientInput {
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
         if (!input.inWorld()) cancelInputs();
+        if (!config.touchEnabled || input.mc.gameSettings.hideGUI) movement.cancel();
         if (event.phase == TickEvent.Phase.START) {
             touchLook.tick(TouchInput.nanoTime());
         } else {
@@ -114,4 +130,12 @@ public final class ClientInput {
 
     @SubscribeEvent
     public void hud(RenderGameOverlayEvent.Text event) { smartTouch.hud(event); }
+
+    @SubscribeEvent
+    public void wheel(RenderGameOverlayEvent.Post event) {
+        if (event.type != RenderGameOverlayEvent.ElementType.ALL || !config.touchEnabled
+                || !input.inWorld() || input.mc.gameSettings.hideGUI) return;
+        MovementWheelHud.draw(input.mc, movement, event.resolution.getScaledWidth(),
+            event.resolution.getScaledHeight());
+    }
 }

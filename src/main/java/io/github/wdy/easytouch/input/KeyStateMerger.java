@@ -7,7 +7,7 @@ import java.util.List;
 
 /** Merges mouse-key overrides and queues clicks independently of Minecraft's input API. */
 public final class KeyStateMerger {
-    public enum Key { ATTACK, USE }
+    public enum Key { ATTACK, USE, FORWARD, BACK, LEFT, RIGHT }
 
     public interface Port {
         boolean physicalDown(Key key);

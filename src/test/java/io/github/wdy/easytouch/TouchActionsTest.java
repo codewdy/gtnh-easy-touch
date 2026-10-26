@@ -36,17 +36,17 @@ public class TouchActionsTest {
 
     @Test public void touchHoldMergesWithPhysicalButtonsAndRestoresThemOnRelease() {
         Port port = new Port();
-        port.physical.addAll(EnumSet.allOf(Key.class));
+        port.physical.addAll(EnumSet.of(Key.ATTACK, Key.USE));
         port.down.addAll(port.physical);
         KeyStateMerger merger = new KeyStateMerger(port);
         TouchActions actions = new TouchActions(merger.newSource(), () -> Action.USE);
         actions.press();
         merger.sync(true);
-        assertEquals(EnumSet.allOf(Key.class), port.down);
+        assertEquals(EnumSet.of(Key.ATTACK, Key.USE), port.down);
         assertEquals(1, port.useClicks);
         actions.release();
         merger.sync(true);
-        assertEquals(EnumSet.allOf(Key.class), port.down);
+        assertEquals(EnumSet.of(Key.ATTACK, Key.USE), port.down);
         port.physical.remove(Key.USE);
         port.down.remove(Key.USE); // Vanilla real right release.
         actions.press();
