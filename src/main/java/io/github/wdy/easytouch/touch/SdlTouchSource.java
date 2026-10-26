@@ -2,6 +2,7 @@ package io.github.wdy.easytouch.touch;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
+import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
 import org.lwjgl.sdl.SDL_Event;
 import org.lwjgl.sdl.SDL_EventFilter;
 import org.lwjgl.sdl.SDL_TouchFingerEvent;
@@ -9,6 +10,8 @@ import static org.lwjgl.sdl.SDLError.SDL_GetError;
 import static org.lwjgl.sdl.SDLEvents.*;
 
 /** SDL3 event watch using the LWJGL bindings supplied by lwjgl3ify. */
+// SDL bindings are LWJGL3 APIs, not legacy LWJGL2 calls to redirect to org.lwjglx.
+@Lwjgl3Aware
 public final class SdlTouchSource implements AutoCloseable {
     private final TouchQueue queue;
     private final IntSupplier window;

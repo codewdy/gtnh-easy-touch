@@ -6,6 +6,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import io.github.wdy.easytouch.TouchConfig;
+import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.command.CommandBase;
@@ -16,12 +17,14 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.world.WorldEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.Display;
+import org.lwjglx.input.Keyboard;
+import org.lwjglx.opengl.Display;
 import static org.lwjgl.sdl.SDLInit.SDL_INIT_EVENTS;
 import static org.lwjgl.sdl.SDLInit.SDL_WasInit;
 
 /** Owns the native source and forwards copied events on the client tick. */
+// Keep SDL3 references intact; legacy input/window calls must explicitly use the lwjgl3ify shim.
+@Lwjgl3Aware
 public final class TouchInput {
     private static final Logger LOG = LogManager.getLogger("GTNH Easy Touch");
     private final Minecraft mc = Minecraft.getMinecraft();
@@ -37,14 +40,14 @@ public final class TouchInput {
     private TouchInput(TouchConfig config) {
         logEvents = config.touchLogEvents;
         try {
-            if (SDL_WasInit(SDL_INIT_EVENTS) == 0 || org.lwjglx.opengl.Display.sdlWindowId == 0) {
+            if (SDL_WasInit(SDL_INIT_EVENTS) == 0 || Display.sdlWindowId == 0) {
                 throw new IllegalStateException("SDL3 events or the lwjgl3ify SDL window are not initialized");
             }
             if (!config.touchEnabled) {
                 status = "disabled";
                 return;
             }
-            source = new SdlTouchSource(queue, () -> org.lwjglx.opengl.Display.sdlWindowId);
+            source = new SdlTouchSource(queue, () -> Display.sdlWindowId);
             status = "ready";
             LOG.info("[Touch] SDL3 event watch ready; {}. Open /easytouch touch to inspect contacts.",
                 source.enabledTypes);

@@ -3,7 +3,7 @@ plugins {
     id("com.gtnewhorizons.retrofuturagradle") version "2.0.6"
 }
 group = "io.github.wdy.easytouch"
-version = "0.4.14"
+version = "0.4.15"
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(8))
     withSourcesJar()
@@ -15,7 +15,10 @@ minecraft {
 repositories {
     mavenCentral()
     maven("https://nexus.gtnewhorizons.com/repository/public/") {
-        content { includeGroup("com.github.GTNewHorizons") }
+        content {
+            includeGroup("com.github.GTNewHorizons")
+            includeGroup("com.gtnewhorizons.retrofuturabootstrap")
+        }
     }
 }
 dependencies {
@@ -46,6 +49,14 @@ val sdlNativePlatform = when {
 } + if (System.getProperty("os.arch") in listOf("aarch64", "arm64")) "-arm64" else ""
 dependencies {
     add(sdlTest.implementationConfigurationName, "junit:junit:4.13.2")
+    // Exercise the same redirect transformer used by the RC2 client, not just bare SDL calls.
+    add(sdlTest.implementationConfigurationName, "com.github.GTNewHorizons:lwjgl3ify:3.0.37:dev") {
+        isTransitive = false
+    }
+    add(sdlTest.implementationConfigurationName, "com.gtnewhorizons.retrofuturabootstrap:RetroFuturaBootstrap:1.1.1") {
+        isTransitive = false
+    }
+    add(sdlTest.implementationConfigurationName, "org.ow2.asm:asm-commons:9.10.1")
     for (module in listOf("lwjgl", "lwjgl-sdl")) {
         add(sdlTest.implementationConfigurationName, "org.lwjgl:$module:3.4.3")
         add(sdlTest.runtimeOnlyConfigurationName, "org.lwjgl:$module:3.4.3:natives-$sdlNativePlatform")

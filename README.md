@@ -2,11 +2,11 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
-**0.4.14 将触点转发改为直接调用 SDL3 和 lwjgl3ify API，移除触控部分的反射。要求 lwjgl3ify 3.0.37 或更新版本及可用的 SDL3 后端，缺失或初始化失败时中止加载。适配 GTNH 2.9.0 RC2 现代 Java 版。**
+**0.4.15 修复 0.4.14 启动时 `org.lwjglx.sdl.SDLInit` 缺类崩溃：为直接调用 SDL3 的类添加 lwjgl3ify 官方兼容标记，保留正确的 SDL3 包名。要求 lwjgl3ify 3.0.37 或更新版本及可用的 SDL3 后端，缺失或初始化失败时中止加载。适配 GTNH 2.9.0 RC2 现代 Java 版。**
 
 ## 安装与使用
 
-1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.14.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.15.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 保持 Minecraft 的“攻击/破坏”为鼠标左键、“使用物品/放置”为鼠标右键。UU 的两个按钮分别发送鼠标左键和右键；长按需持续保持按下状态，不要配置成连点宏。
 3. 在“选项 → 控制 → GTNH 触屏优化”中，为“切换自适应左右键”设置一个空闲按键，再将 UU 的第三个按钮映射为该键。默认不占用快捷键。
 4. 如需单键执行 Shift+T，在同一分类为“打开 NEI 合成树（等效 Shift+T）”绑定一个空闲键盘键，也可将 UU 的按钮映射到它。默认未绑定，设置由 Minecraft 控制菜单保存。
@@ -33,6 +33,8 @@
 接入方式为 SDL3 的 [`SDL_AddEventWatch`](https://wiki.libsdl.org/SDL3/SDL_AddEventWatch)：原始事件入队时复制触点数据，随后由 lwjgl3ify 原事件循环继续处理。这里利用现成的原生回调入口，没有修改 lwjgl3ify 的字节码或磁盘 jar，也不会另开一个事件轮询去抢走事件。接口按 RC2 的 [lwjgl3ify 3.0.37](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/org/lwjglx/Lwjgl3ifyEventLoop.java) 及其 LWJGL 3.4.3 依赖核对；SDL 官方提供的触点事件包含设备 ID、手指 ID、窗口 ID、时间戳、坐标、位移及压力。
 
 原生回调可能来自其他线程，因此先复制数据进入有界队列，再于 MC 客户端 tick 发布 `MinecraftForge.EVENT_BUS` 上的 [TouchInputEvent](src/main/java/io/github/wdy/easytouch/touch/TouchInputEvent.java)。该事件不可取消，只转发数据；坐标原点在窗口左上角，通常范围为 0..1，允许边界外坐标。失焦、切换世界、队列溢出或接口错误时发布 `RESET`，消费者应清除全部按住状态。模拟鼠标触点通过 `sample.simulated()` 区分。触控代码直接使用 `SDL_Event`、`SDL_TouchFingerEvent`、`SDL_EventFilter` 和 `Display.sdlWindowId`；lwjgl3ify、LWJGL3 的 Java 绑定作为 `compileOnly` 依赖，运行时由整合包提供，不把依赖或原生库打入 mod。
+
+`TouchInput` 和 `SdlTouchSource` 使用 `@Lwjgl3Aware`，防止 lwjgl3ify 的 [LWJGL2 重定向器](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/me/eigenraven/lwjgl3ify/rfb/transformers/LwjglRedirectTransformer.java) 将 `org.lwjgl.sdl.*` 改写为不存在的 `org.lwjglx.sdl.*`。带此标记的 `TouchInput` 显式使用 `org.lwjglx.input.Keyboard` 和 `org.lwjglx.opengl.Display`；其他类仍保留正常的 LWJGL2 兼容重写。如果旧版出现上述缺类错误，替换 Easy Touch jar 即可修复这处包名错误，无需额外安装 SDL jar。
 
 ## 指向目标切换 smart 匹配
 
@@ -250,7 +252,7 @@ registry 先检查手动目标规则；没有对应的强制允许/禁用时，�
 
 使用 Java 25 执行 `./gradlew build`（Windows：`gradlew.bat build`）。Gradle 自动获取编译所需的 Java 8；产物使用 Java 8 字节码，但运行环境仍需满足 lwjgl3ify 和 SDL3 的要求，请使用 GTNH 现代 Java 版。
 
-`./gradlew sdlTest` 单独运行真实 SDL3 回调集成测试，使用与 RC2 相同的 LWJGL 3.4.3，在隔离类路径和 Java 25 中加载对应平台原生库；这些测试依赖不进入普通 Minecraft/LWJGL2 测试运行环境或产物。测试通过 `SDL_PushEvent` 注入两指、移动、抬起、取消和焦点事件，验证直接回调实际可调用、字段独立复制、原队列未被消费、鼠标模拟识别、窗口过滤、注销及异常处理。它不依赖显示器或触摸硬件，也不能代替完整 GTNH 客户端和 UU 的触点透传实测。0.4.13 的触摸反馈已获用户实测确认；0.4.14 的直接 API 实现仍需在客户端复测。
+`./gradlew sdlTest` 单独运行真实 SDL3 回调集成测试，使用与 RC2 相同的 LWJGL 3.4.3，在隔离类路径和 Java 25 中加载对应平台原生库；这些测试依赖不进入普通 Minecraft/LWJGL2 测试运行环境或产物。测试通过 `SDL_PushEvent` 注入两指、移动、抬起、取消和焦点事件，验证直接回调实际可调用、字段独立复制、原队列未被消费、鼠标模拟识别、窗口过滤、注销及异常处理。另使用 lwjgl3ify 3.0.37 的真实重定向器验证 SDL3 引用保持原包名、键盘/窗口使用正确兼容类、普通鼠标控制仍会正常重写，并通过移除兼容标记复现旧版错误包名。它不依赖显示器或触摸硬件，也不能代替完整 GTNH 客户端和 UU 的触点透传实测。0.4.13 的触摸反馈已获用户实测确认；0.4.15 的修复仍需在客户端复测。
 
 普通单元测试覆盖设备/手指双重标识、模拟触点单独计数、失焦与恢复、无按下的移动事件、队列溢出、跨线程收发、异常坐标、配置持久化，以及缺失 SDL 依赖时立即抛错。触点监听代码通过正常构建直接检查 API 类型和签名。
 
