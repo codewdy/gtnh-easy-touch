@@ -21,7 +21,7 @@ public final class SmartTouchInput {
         this.resolver = new TargetResolver(config);
     }
 
-    /** Resolve once when a touch click/hold actually starts, then lock it until release. */
+    /** Resolve the action for a smart tap or secondary button; world long presses always attack. */
     public Action touchPrimary() {
         return config.enabled && !mc.thePlayer.isSneaking()
             ? resolver.resolve(mc) : Action.ATTACK;

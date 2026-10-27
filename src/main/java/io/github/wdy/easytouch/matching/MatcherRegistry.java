@@ -69,6 +69,7 @@ public final class MatcherRegistry {
     }
 
     public boolean matches(TargetContext context) {
+        if (GregTechMatcher.suppressesSmart(context)) return false;
         if (overrides.appliesTo(context)) {
             TargetIdentity identity = TargetIdentity.resolve(context);
             Boolean match = identity == null ? null : overrides.get(identity.key);

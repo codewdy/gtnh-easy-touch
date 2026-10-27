@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import cpw.mods.fml.common.FMLLog;
+import net.minecraft.item.ItemStack;
 
 /** GT 机器名单和读取内部设备类型的适配器；不依赖 GT 编译库。 */
 public final class GregTechMatcher implements TargetMatcher {
@@ -32,6 +33,16 @@ public final class GregTechMatcher implements TargetMatcher {
             "gregtech.common.tileentities.boilers.MTEBoiler",
             "gregtech.common.tileentities.storage.MTEDigitalTankBase", // 含量子储罐
             "gregtech.common.tileentities.storage.MTEQuantumChest");
+    }
+
+    /** Tool-on-GT-block interaction keeps vanilla actions, even with a user allow rule. */
+    public static boolean suppressesSmart(TargetContext context) {
+        if (!context.isBlock()) return false;
+        ItemStack held = context.heldItem();
+        if (held == null || held.getItem() == null
+            || !MatchSupport.hasType(held.getItem().getClass(), "gregtech.api.items.MetaGeneratedTool")) return false;
+        String blockId = context.blockId();
+        return blockId != null && blockId.startsWith("gregtech:");
     }
 
     @Override

@@ -2,6 +2,10 @@
 
 给 GTNH 2.9 / Minecraft 1.7.10 Forge 提供客户端触屏操作优化，主要用于 UU 远程。无需服务端安装。
 
+**0.4.41 手持格雷工具且目标为格雷方块时临时禁用 smart，优先于用户自定义规则；换工具或目标后自动恢复。**
+
+**0.4.40 世界内静止长按 0.25 秒固定持续挖掘/攻击，长按后拖动视角仍保持按下，松手才释放。轻触继续遵循 smart 规则，直接滑动仍只转动视角。**
+
 **0.4.39 背包与容器槽位的物品支持长按 0.25 秒打开菜单：详情、拆分、NEI。NEI 子菜单提供来源、用途、书签、合成以及返回。短按保留普通取放，拖拽保留鼠标拖拽；拆分走原生右键取物流程，数量不足或槽位不可取时置灰，光标持有物品时保留普通放置操作。**
 
 **0.4.38 移除 NEI 长按菜单中的“详情”，物品详情通过轻触悬停查看。物品栏菜单保留来源、用途、书签、合成；配方物品菜单保留来源、用途、书签。**
@@ -24,11 +28,11 @@
 2. 在串流软件中开启原生触点透传；模组不依赖串流软件额外模拟鼠标点击。真实鼠标或串流按键发送的左右键保持原版行为。
 3. 点击右下角全局菜单切换 smart、显示/隐藏触屏按键或配置映射。本模组不再向游戏控制菜单注册快捷键。
 
-触摸 smart 默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后世界内触摸点击与长按执行攻击/挖掘，拖拽仍控制视角。开启时，命中白名单目标的触摸动作执行使用/交互。背包、机器、NEI、聊天等 GUI 内始终模拟普通鼠标左键。攻击/使用改绑后仍通过对应的游戏按键执行触摸动作。
+触摸 smart 默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后世界内触摸点击与长按执行攻击/挖掘，拖拽仍控制视角。开启时，命中白名单目标的轻触执行使用/交互；长按始终执行攻击/挖掘。背包、机器、NEI、聊天等 GUI 内始终模拟普通鼠标左键。攻击/使用改绑后仍通过对应的游戏按键执行触摸动作。
 
 世界模式左下方显示 WASD 轮盘：按住方向持续移动，斜向支持两个方向同时移动，滑回中心停步，松手停止。左手移动时可用另一根手指拖动视角。轮盘沿用游戏前后左右按键绑定，不受 smart 开关影响；打开 GUI、失焦或隐藏 HUD 时释放移动。需要原生触点透传。
 
-玩家处于潜行状态（默认按住 Shift）时，新触摸动作执行攻击/挖掘，即使目标在白名单中也不转为交互；准星旁的“交互”提示同时隐藏。依据 `player.isSneaking()` 判断。已经开始的触摸长按保持原动作，松手后才重新判断。
+玩家处于潜行状态（默认按住 Shift）时，新触摸动作执行攻击/挖掘，即使目标在白名单中也不转为交互；准星旁的“交互”提示同时隐藏。依据 `player.isSneaking()` 判断。世界内长按始终保持攻击/挖掘，不受 smart 或潜行状态影响。
 
 ## 自定义触屏按键
 
@@ -99,7 +103,7 @@ touch {
 
 目标匹配切换快捷键已移除；之前保存的手动规则继续生效。
 
-作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
+作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手持格雷工具且目标为格雷方块时强制禁用 smart，优先于手动规则；其余情况下手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
 
 方块优先按 Forge“选取方块”的物品注册名和变体识别，因此朝向、位置、物品数量、容器内容和自定义名称不改变规则。GT 设备使用其机器编号，AE2 使用指向的部件，终端不会连带切换线缆；无法返回选取物品的方块退回精确方块注册名和世界元数据。规则不按坐标保存，也不区分仅由 NBT 表示的外观差异。这里仅调用选取结果查询，不给玩家物品，也不执行方块交互。
 
@@ -158,11 +162,13 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 
 潘马斯类型已核对 RC2 的 [harvestcraft 1.3.15-GTNH 开发包](https://nexus.gtnewhorizons.com/repository/releases/com/github/GTNewHorizons/harvestcraft/1.3.15-GTNH/harvestcraft-1.3.15-GTNH-dev.jar)；其他作物类型核对了 [CropsNH 2.0.134](https://github.com/GTNewHorizons/CropsNH/blob/2.0.134/src/main/java/com/gtnewhorizon/cropsnh/blocks/BlockCropSticks.java)、[Natura 2.8.24](https://github.com/GTNewHorizons/Natura/blob/2.8.24/src/main/java/mods/natura/blocks/crops/CropBlock.java) 和 [IC2 2.2.828 开发包](https://maven.ic2.player.to/net/industrial-craft/industrialcraft-2/2.2.828-experimental/industrialcraft-2-2.2.828-experimental-dev.jar)。可选模组按已确认的类家族识别，不新增运行时依赖。
 
-默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可通过 matcher 配置另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着扳手对名单中的 GT 机器触摸执行使用，潜行触摸执行攻击。
+默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可通过 matcher 配置另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着格雷扳手对 GT 机器触摸执行攻击/挖掘，Smart 副键执行使用，避免工具操作被 smart 改写。
+
+手持 `gregtech.api.items.MetaGeneratedTool` 或其子类的工具，且目标方块注册域为 `gregtech:` 时，最高优先级禁用本次 smart 匹配（含机器、管线、外壳等格雷方块），即使用户规则明确允许交互也不例外。此时不显示“交互”提示，不修改全局 smart 开关或已保存规则；空手、非格雷工具、非格雷方块和实体目标继续遵循原规则。
 
 GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管线宿主，并且不放行整个 `gregtech:gt.blockmachines`。AE2 使用原生 `IPartHost` 的部件选择接口，只匹配准星选中的部件，线缆或外观面板本身不触发触摸交互。模组缺失、接口不兼容、设备未同步或部件未识别时保持原版；接口异常会在日志中记录一次。兼容接口只读取状态，不执行右键或打开 GUI 来探测目标。
 
-触摸长按开始执行时锁定动作，松手或转为拖拽时释放。长按过程中改变准星目标或目标规则不会切换动作。打开 GUI、失焦、死亡、切换世界或切换 smart 模式时清理触摸输入，返回后需重新按下。实际挖掘和交互由游戏原有逻辑执行，本模组不直接发送攻击或破坏数据包。
+触摸静止长按 0.25 秒后持续按住攻击/挖掘键，随后拖拽视角仍保持按住，松手时释放。长按过程中改变准星目标或目标规则不会切换动作。直接滑动不会启动长按。打开 GUI、失焦、死亡、切换世界或切换 smart 模式时清理触摸输入，返回后需重新按下。实际挖掘和交互由游戏原有逻辑执行，本模组不直接发送攻击或破坏数据包。
 
 ## 配置 matcher
 
@@ -202,7 +208,7 @@ matchers {
 }
 ```
 
-未潜行且准星命中匹配目标（含手动规则）时，下方仅显示“交互”；潜行或未命中时不显示提示。提示跟随当前目标，长按期间的实际按键映射仍按一次按压锁定。`general.showHud=false` 可以关闭该提示。
+未潜行且准星命中匹配目标（含手动规则）时，下方仅显示“交互”；潜行或未命中时不显示提示。提示跟随当前目标，仅表示轻触的 smart 动作；长按始终执行攻击/挖掘。`general.showHud=false` 可以关闭该提示。
 
 升级时保留全局开关和 HUD 设置。0.2.0 的 `whitelist` 列表会自动迁移一次：方块按注册名前缀分配到各 matcher，未知模组的自定义方块归入 `vanilla_blocks.blocks`；实体、宠物、方块实体、GT 设备与 AE2 部件列表分别迁入对应 matcher。空列表、自定义条目和元数据限制都保留，已存在的新配置优先。旧分类保留作参考，迁移后不再读取。0.1.0 的启发式 `rules` 仍不执行。
 
@@ -215,7 +221,7 @@ matchers {
 | [SmartTouchInput.java](src/main/java/io/github/wdy/easytouch/input/SmartTouchInput.java) | 触摸 smart 目标判定和准星提示 |
 | [TouchLook.java](src/main/java/io/github/wdy/easytouch/input/TouchLook.java) | 世界内轻触、长按、拖拽阈值及取消 |
 | [TouchMouse.java](src/main/java/io/github/wdy/easytouch/input/TouchMouse.java) | GUI 内触摸模拟鼠标点击与拖动 |
-| [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 触摸激活时选择攻击/交互，长按期间保持动作 |
+| [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 轻触选择攻击/交互，长按持续保持攻击 |
 | [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 攻击/使用按键的状态合并、一次点击和队列清理 |
 | [MinecraftInput.java](src/main/java/io/github/wdy/easytouch/input/MinecraftInput.java) | Minecraft 环境判断和底层按键读写 |
 

@@ -2,7 +2,7 @@ package io.github.wdy.easytouch.input;
 
 import io.github.wdy.easytouch.touch.TouchSample;
 
-/** One native contact owns a tap, stationary hold, or look drag. Times use SDL's nanosecond clock. */
+/** One native contact owns a tap, attack hold, or look drag; dragging preserves an active hold. Times use SDL's nanosecond clock. */
 public final class TouchLook {
     public interface Port {
         boolean inWorld();
@@ -63,10 +63,6 @@ public final class TouchLook {
         float dy = (sample.y - startY) * height;
         if (!dragging && dx * dx + dy * dy > threshold * threshold) {
             dragging = true;
-            if (holding) {
-                holding = false;
-                port.release();
-            }
         }
         if (dragging) {
             // Include the initial dead-zone displacement once, then apply incremental motion.
@@ -77,8 +73,13 @@ public final class TouchLook {
         if (sample.kind == TouchSample.Kind.UP) {
             long duration = sample.timestamp - started;
             // A whole stationary hold can arrive in one batch after a stalled frame.
-            if (!dragging && !holding && duration >= 0 && (duration <= TAP_NS || duration >= TouchTiming.HOLD_NS)) {
-                port.click();
+            if (!dragging && !holding && duration >= 0) {
+                if (duration >= TouchTiming.HOLD_NS) {
+                    holding = true;
+                    port.press();
+                } else if (duration <= TAP_NS) {
+                    port.click();
+                }
             }
             cancel();
         }

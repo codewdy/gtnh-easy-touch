@@ -4,7 +4,7 @@ import java.util.function.Supplier;
 import io.github.wdy.easytouch.Action;
 import io.github.wdy.easytouch.input.KeyStateMerger.Key;
 
-/** Chooses a touch action at activation, then keeps that key held without re-resolving the target. */
+/** Smart taps select an action; long presses always hold attack until release. */
 public final class TouchActions {
     private final KeyStateMerger.Source keys;
     private final Supplier<Action> primary;
@@ -17,9 +17,8 @@ public final class TouchActions {
     private Key key() { return primary.get() == Action.ATTACK ? Key.ATTACK : Key.USE; }
     public void click() { keys.click(key()); }
     public void press() {
-        Key selected = key();
-        keys.hold(selected);
-        keys.click(selected);
+        keys.hold(Key.ATTACK);
+        keys.click(Key.ATTACK);
     }
     public void release() {
         keys.release(Key.ATTACK);
