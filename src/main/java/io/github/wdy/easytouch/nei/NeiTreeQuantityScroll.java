@@ -11,7 +11,7 @@ import codechicken.nei.bookmark.BookmarkItem;
 import codechicken.nei.bookmark.tree.CraftingTreeGraph;
 import codechicken.nei.bookmark.tree.GuiCraftingTree;
 
-/** Uses RC2's native hit testing and quantity rules without changing global keyboard state. */
+/** Uses RC2's native hit testing with item-count targets without changing global keyboard state. */
 final class NeiTreeQuantityScroll {
     private final Field canvas;
     private final Field graph;
@@ -62,17 +62,29 @@ final class NeiTreeQuantityScroll {
     void changeAmount(GuiCraftingTree tree, BookmarkGrid bookmarks, int groupId, BookmarkItem item, int wheel)
             throws ReflectiveOperationException {
         long step = NEIClientUtils.altKey() ? NEIClientUtils.getScrollMultiplier(item.itemStack) : 1;
-        bookmarks.shiftRecipeAmount(groupId, item.recipeId, wheel > 0 ? step : -step);
-        rebuild.invoke(tree, new Object[] {null});
+        changeFixedSteps(tree, bookmarks, groupId, item, (int) (wheel > 0 ? step : -step));
     }
 
     void changeFixedSteps(GuiCraftingTree tree, BookmarkGrid bookmarks, int groupId, BookmarkItem item, int steps)
             throws ReflectiveOperationException {
-        // Buttons supply an exact batch count independent of modifier keys.
-        // Repeat native unit steps to avoid snapping to a multiple of that count.
-        for (int i = 0; i < Math.abs(steps); i++) {
-            bookmarks.shiftRecipeAmount(groupId, item.recipeId, steps > 0 ? 1 : -1);
+        Long exact = ExactCraftingTargets.get(bookmarks, item);
+        long current = exact == null ? item.getStackSize(item.getAmount()) : exact;
+        // Graph nodes may include inherited demand; read the root's native multiplier instead.
+        if (exact == null) {
+            Long batches = bookmarks.createRecipeChainMath(groupId).outputRecipes.get(item.recipeId);
+            if (batches != null) current = item.getStackSize(item.getAmount(batches));
         }
+        long amount = ExactCraftingTargets.adjusted(current, steps);
+        ExactCraftingTargets.set(bookmarks, item, amount);
+        long batches = InitialCraftingQuantity.above(amount - 1,
+            count -> item.getStackSize(item.getAmount(count)));
+        for (int index : bookmarks.createChainItems(groupId).keySet()) {
+            BookmarkItem stored = bookmarks.getBookmarkItem(index);
+            if (stored.equalsRecipe(item.recipeId, groupId) && !stored.emptyFactor()) {
+                stored.multiplier = batches;
+            }
+        }
+        bookmarks.onItemsChanged();
         rebuild.invoke(tree, new Object[] {null});
     }
 

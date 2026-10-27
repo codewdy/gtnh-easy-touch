@@ -39,7 +39,7 @@ easytouch.neiMenu.7=Back
 easytouch.craftTree.buttonCraft=Craft
 easytouch.craftTree.craftHint=Craft using this tree without adding or deleting bookmarks.
 easytouch.craftTree.quantity=Owned %s + missing %s; target %s
-easytouch.craftTree.quantityHint=The label shows inventory and target shortfall; original crafting batch rules still apply.
+easytouch.craftTree.quantityHint=The label shows the target shortfall; crafting uses whole batches and may produce extra items.
 
 easytouch.craftTree.buttonTryCraft=Try Craft
 easytouch.craftTree.tryCraftHint=Skip the feasibility check and let NEI try this tree; cyclic recipes may still not complete.

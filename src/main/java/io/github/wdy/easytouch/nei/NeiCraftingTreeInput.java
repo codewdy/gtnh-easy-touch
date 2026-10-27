@@ -423,8 +423,9 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
                     message("notCraftable");
                     return false;
                 }
-                NeiCraftingAvailability.prepareBatch(plan, AutoCraftingManager.getInventoryItems(target));
-                AutoCraftingManager.runProcessing(plan);
+                RecipeChainMath prepared = NeiCraftingAvailability.prepareBatch(
+                    plan, AutoCraftingManager.getInventoryItems(target), bookmarks);
+                AutoCraftingManager.runProcessing(prepared);
                 return true;
             } catch (RuntimeException | LinkageError error) {
                 fail(error);

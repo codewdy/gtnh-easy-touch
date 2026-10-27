@@ -39,7 +39,7 @@ easytouch.neiMenu.7=返回
 easytouch.craftTree.buttonCraft=合成
 easytouch.craftTree.craftHint=按当前合成树执行自动合成，不添加或删除书签。
 easytouch.craftTree.quantity=已有 %s + 待补 %s；目标 %s
-easytouch.craftTree.quantityHint=上方为库存与目标差额；合成仍沿用原有补齐和批次规则。
+easytouch.craftTree.quantityHint=上方为精确目标的库存差额；实际合成按完整批次补齐，可能有多余产物。
 
 easytouch.craftTree.buttonTryCraft=尝试合成
 easytouch.craftTree.tryCraftHint=跳过可合成性预检，让 NEI 尝试执行当前合成树；不保证循环配方能完成。

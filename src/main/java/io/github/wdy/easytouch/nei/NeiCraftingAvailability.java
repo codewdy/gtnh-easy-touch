@@ -3,6 +3,8 @@ package io.github.wdy.easytouch.nei;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.HashMap;
 import codechicken.nei.ItemStackAmount;
 import codechicken.nei.NEIClientUtils;
 import codechicken.nei.PositionedStack;
@@ -26,7 +28,7 @@ public final class NeiCraftingAvailability {
         RecipeChainMath probe = grid.createRecipeChainMath(group);
         if (probe == null || probe.outputRecipes.isEmpty()) return false;
         ItemStackAmount inventory = AutoCraftingManager.getInventoryItems(container);
-        prepareBatch(probe, inventory);
+        probe = prepareBatch(probe, inventory, grid);
 
         List<BookmarkItem> initialItems = new ArrayList<>();
         for (BookmarkItem item : probe.initialItems) {
@@ -45,8 +47,16 @@ public final class NeiCraftingAvailability {
         return false;
     }
 
-    /** NEI 2.8.155 Shift+C batch rounding, with an explicit inventory instead of currentScreen. */
-    public static void prepareBatch(RecipeChainMath plan, ItemStackAmount inventory) {
+    /** Exact edited targets; untouched bookmarks retain NEI Shift+C rounding. */
+    public static RecipeChainMath prepareBatch(RecipeChainMath plan, ItemStackAmount inventory, BookmarkGrid grid) {
+        Map<Integer, Long> exactAmounts = new HashMap<>();
+        int rootIndex = plan.recipeIngredients.size();
+        for (BookmarkItem output : plan.recipeResults) {
+            if (!plan.outputRecipes.containsKey(output.recipeId)) continue;
+            Long exact = ExactCraftingTargets.get(grid, output);
+            if (exact != null) exactAmounts.put(rootIndex, exact);
+            rootIndex++;
+        }
         RecipeId root = plan.createMasterRoot();
         List<ItemStack> stacks = inventory.values();
         for (int index = 0; index < plan.recipeIngredients.size(); index++) {
@@ -59,11 +69,22 @@ public final class NeiCraftingAvailability {
                     owned += StackInfo.getAmount(stack);
                 }
             }
-            if (owned >= requested) {
+            Long exact = exactAmounts.get(index);
+            if (exact != null) {
+                plan.recipeIngredients.set(index, BookmarkItem.builder(item).multiplier(1)
+                    .factor(exact).chance(PositionedStack.CHANCE_FULL).build());
+            } else if (owned >= requested) {
                 long target = owned - owned % requested + requested;
                 plan.recipeIngredients.set(index, BookmarkItem.builder(item).multiplier(1)
                     .factor(target).chance(PositionedStack.CHANCE_FULL).build());
             }
         }
+        // Rebuild NEI's private recipe index after replacing root ingredients.
+        List<BookmarkItem> items = new ArrayList<>(plan.initialItems);
+        items.addAll(plan.recipeIngredients);
+        for (BookmarkItem result : plan.recipeResults) {
+            items.add(result.copyWithMultiplier(root.equals(result.recipeId) ? 1 : 0));
+        }
+        return RecipeChainMath.of(items, Collections.singleton(root));
     }
 }

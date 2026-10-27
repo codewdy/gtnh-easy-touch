@@ -4,7 +4,6 @@ import java.util.List;
 import java.lang.reflect.Field;
 import codechicken.nei.NEIClientUtils;
 import codechicken.nei.recipe.StackInfo;
-import codechicken.nei.util.ReadableNumberConverter;
 import codechicken.nei.bookmark.BookmarkItem;
 import codechicken.nei.bookmark.tree.GuiCraftingTree;
 import cpw.mods.fml.common.eventhandler.EventPriority;
@@ -18,7 +17,7 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-/** Output-aware quantity buttons with touch/mouse hold-to-repeat in a reserved canvas strip. */
+/** Item-count quantity buttons with touch/mouse hold-to-repeat in a reserved canvas strip. */
 // Forge dispatches @SubscribeEvent methods through classes generated in another package/loader.
 public final class NeiTreeQuantityButtons extends Gui {
     interface Context {
@@ -42,8 +41,6 @@ public final class NeiTreeQuantityButtons extends Gui {
     private final Context context;
     private final NeiTreeQuantityScroll quantities;
     private final QuantityButtonRepeat repeat = new QuantityButtonRepeat();
-    private long batchOutput;
-    private int largeBatches = 64;
     private final RenderItem renderer = new RenderItem();
     private GuiCraftingTree tree;
     private BookmarkItem selected;
@@ -147,24 +144,16 @@ public final class NeiTreeQuantityButtons extends Gui {
         }
         else if (next) index = (index + 1) % Math.max(1, outputs.size());
         selected = outputs.isEmpty() ? null : outputs.get(index);
-        batchOutput = selected == null ? 0 : selected.getStackSize(selected.getAmount(1));
-        largeBatches = QuantityButtonStep.largeBatches(batchOutput);
     }
 
     private int steps(int part) {
-        int batches = part == 0 || part == 3 ? largeBatches : 1;
-        return part < 2 ? batches : -batches;
+        int amount = part == 0 || part == 3 ? 64 : 1;
+        return part < 2 ? amount : -amount;
     }
 
     private String label(int part) {
-        int batches = Math.abs(steps(part));
-        String sign = part < 2 ? "+" : "-";
-        // A fractional/chance output rounded to zero cannot be labelled as a fixed item count.
-        if (batchOutput <= 0) return sign + batches + "x";
-        long amount = batchOutput * batches;
-        String text = amount < 10000 ? Long.toString(amount)
-            : ReadableNumberConverter.INSTANCE.toWideReadableForm(amount);
-        return sign + text + (selected != null && StackInfo.isFluidDisplayItem(selected.itemStack) ? "L" : "");
+        return (part < 2 ? "+" : "") + steps(part)
+            + (selected != null && StackInfo.isFluidDisplayItem(selected.itemStack) ? "L" : "");
     }
 
     @SubscribeEvent

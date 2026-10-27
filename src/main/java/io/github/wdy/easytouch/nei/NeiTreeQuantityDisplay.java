@@ -7,6 +7,7 @@ import java.util.Map;
 import codechicken.nei.ItemStackAmount;
 import codechicken.nei.NEIClientUtils;
 import codechicken.nei.bookmark.BookmarkItem;
+import codechicken.nei.bookmark.BookmarkGrid;
 import codechicken.nei.bookmark.tree.CraftingTreeGraph;
 import codechicken.nei.bookmark.tree.GuiCraftingTree;
 import codechicken.nei.guihook.GuiContainerManager;
@@ -28,6 +29,7 @@ import org.lwjgl.opengl.GL11;
 
 /** Read-only annotations: neither bookmark quantities nor crafting plans are changed here. */
 final class NeiTreeQuantityDisplay implements IContainerDrawHandler, IContainerTooltipHandler {
+    private final Field grid = field(GuiCraftingTree.class, "grid");
     private final Field canvas = field(GuiCraftingTree.class, "canvas");
     private final Field hoveredNode = field(GuiCraftingTree.class, "hoveredNode");
     private final Field graph = field(canvas.getType(), "graph");
@@ -91,10 +93,11 @@ final class NeiTreeQuantityDisplay implements IContainerDrawHandler, IContainerT
         return target > owned ? target - owned : 0;
     }
 
-    private long target(Object node, BookmarkItem item) throws IllegalAccessException {
+    private long target(GuiCraftingTree tree, Object node, BookmarkItem item) throws IllegalAccessException {
         // Use the root's own target, excluding demand inherited from other output recipes.
         // Convert fluid quantities to the same item/container units as the inventory count.
-        return item.getStackSize(requested.getLong(node));
+        Long exact = ExactCraftingTargets.get((BookmarkGrid) grid.get(tree), item);
+        return exact != null ? exact : item.getStackSize(requested.getLong(node));
     }
 
     private static String compact(long amount) {
@@ -128,7 +131,7 @@ final class NeiTreeQuantityDisplay implements IContainerDrawHandler, IContainerT
                 BookmarkItem item = (BookmarkItem) ingredient.get(node);
                 long owned = owned(item);
                 String unit = StackInfo.isFluidDisplayItem(item.itemStack) ? "L" : "";
-                String label = compact(owned) + unit + " + " + compact(missing(owned, target(node, item))) + unit;
+                String label = compact(owned) + unit + " + " + compact(missing(owned, target(tree, node, item))) + unit;
                 float textScale = Math.min(1.0f, scale);
                 float labelX = offsetX + (point.x + 9) * scale;
                 float labelY = offsetY + point.y * scale - (font.FONT_HEIGHT + 2) * textScale;
@@ -165,7 +168,7 @@ final class NeiTreeQuantityDisplay implements IContainerDrawHandler, IContainerT
             if (view == null || node == null || !((CraftingTreeGraph) graph.get(view)).roots.contains(node)) return tips;
             BookmarkItem item = (BookmarkItem) ingredient.get(node);
             long owned = owned(item);
-            long target = target(node, item);
+            long target = target(tree, node, item);
             String unit = StackInfo.isFluidDisplayItem(item.itemStack) ? "L" : "";
             tips.add(I18n.format("easytouch.craftTree.quantity", owned + unit,
                 missing(owned, target) + unit, target + unit));

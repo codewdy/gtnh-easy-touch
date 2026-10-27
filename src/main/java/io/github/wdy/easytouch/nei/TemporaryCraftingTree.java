@@ -74,7 +74,6 @@ final class TemporaryCraftingTree extends GuiCraftingTree {
 
         /** Set the initial target once; later quantity edits and execution keep NEI's normal rules. */
         private void initializeQuantity(int groupId, Recipe root, GuiContainer source) {
-            if (source == null || source.inventorySlots == null) return;
             ItemStack output = root.getResult();
             if (output == null) return;
             BookmarkItem result = null;
@@ -87,13 +86,15 @@ final class TemporaryCraftingTree extends GuiCraftingTree {
                 }
             }
             if (result == null) return;
-            ItemStackAmount inventory = AutoCraftingManager.getInventoryItems(source);
+            ItemStackAmount inventory = source == null || source.inventorySlots == null
+                ? new ItemStackAmount() : AutoCraftingManager.getInventoryItems(source);
             long owned = 0;
             for (ItemStack stack : inventory.values()) {
                 if (NEIClientUtils.areStacksSameTypeCraftingWithNBT(stack, result.itemStack)) {
                     owned += StackInfo.getAmount(stack);
                 }
             }
+            ExactCraftingTargets.set(this, result, ExactCraftingTargets.adjusted(owned, 1));
             final BookmarkItem target = result;
             // Use NEI's own output rounding, including chance and fluid/container units.
             long multiplier = InitialCraftingQuantity.above(owned,
