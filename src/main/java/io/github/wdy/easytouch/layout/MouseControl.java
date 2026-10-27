@@ -10,7 +10,7 @@ import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
 import net.minecraft.client.Minecraft;
 import org.lwjglx.input.Mouse;
 
-/** Full-screen touchpad, with only a pointer overlay and no on-screen controller. */
+/** Touchpad for contacts outside the on-screen buttons, with a pointer overlay. */
 @Lwjgl3Aware
 public final class MouseControl {
     private final Minecraft mc = Minecraft.getMinecraft();

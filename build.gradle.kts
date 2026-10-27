@@ -3,7 +3,7 @@ plugins {
     id("com.gtnewhorizons.retrofuturagradle") version "2.0.6"
 }
 group = "io.github.wdy.easytouch"
-version = "0.4.55"
+version = "0.4.56"
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(8))
     withSourcesJar()

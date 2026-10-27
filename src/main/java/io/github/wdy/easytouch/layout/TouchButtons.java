@@ -108,7 +108,7 @@ public final class TouchButtons {
             && (mc.currentScreen != null || (mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus && !mc.gameSettings.hideGUI));
     }
     public void syncKeyboard() { if (mc.currentScreen == null && mc.inGameHasFocus && Display.isActive()) keyboard.syncBindings(); }
-    public boolean buttonsVisible() { return config.buttonsVisible && !mouseControl.isOpen(); }
+    public boolean buttonsVisible() { return config.buttonsVisible; }
     public boolean mouseControlActive() { return mouseControl.isOpen(); }
     private boolean menuAvailable() {
         return enabled && Display.isActive() && (mc.currentScreen != null || mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus);
@@ -122,7 +122,6 @@ public final class TouchButtons {
         if (menu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (!available() || !config.buttonsVisible && !mouseControl.isOpen()) { cancel(); return false; }
         if (s.simulated() || !s.valid()) return false;
-        if (mouseControl.isOpen()) return mouseControl.accept(s, r.getScaledWidth(), r.getScaledHeight());
         String id = s.deviceId + ":" + s.fingerId;
         TouchLayout.Button b = contacts.get(id);
         if (b != null) {
@@ -138,8 +137,10 @@ public final class TouchButtons {
             }
             return true;
         }
-        if (s.kind != TouchSample.Kind.DOWN) return false;
-        for (int i = layout.buttons.size() - 1; i >= 0; i--) {
+        // A contact stays with its button or touchpad until released.
+        if (s.kind != TouchSample.Kind.DOWN)
+            return mouseControl.isOpen() && mouseControl.accept(s, r.getScaledWidth(), r.getScaledHeight());
+        if (buttonsVisible()) for (int i = layout.buttons.size() - 1; i >= 0; i--) {
             b = layout.buttons.get(i);
             if (!visible(b) || !b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) continue;
             contacts.put(id, b);
@@ -151,7 +152,7 @@ public final class TouchButtons {
             }
             return true;
         }
-        return false;
+        return mouseControl.isOpen() && mouseControl.accept(s, r.getScaledWidth(), r.getScaledHeight());
     }
     private void release(TouchLayout.Button b) {
         List<Integer> combination = held.remove(b);
