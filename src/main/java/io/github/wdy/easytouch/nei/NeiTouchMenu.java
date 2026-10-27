@@ -24,6 +24,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.item.ItemStack;
+import net.minecraft.inventory.Slot;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -36,12 +37,16 @@ public final class NeiTouchMenu {
     private static final int ROW = 22;
     private static final int[] PANEL_ACTIONS = {1, 2, 3, 4};
     private static final int[] RECIPE_ACTIONS = {1, 2, 3};
+    private static final int[] INVENTORY_ACTIONS = {0, 5, 6};
+    private static final int[] INVENTORY_NEI_ACTIONS = {1, 2, 3, 4, 7};
     private int[] actions = PANEL_ACTIONS;
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Map<String, Integer> contacts = new HashMap<>();
     private final Method bookmark;
     private final NeiRecipeTouchTarget recipeTargets;
     private NeiRecipeTouchTarget.Selection recipeSelection;
+    private final ContainerItemTarget inventoryTargets;
+    private ContainerItemTarget.Selection inventorySelection;
     private GuiContainer screen;
     private ItemStack stack;
     private Widget panel;
@@ -57,11 +62,18 @@ public final class NeiTouchMenu {
             ItemStack.class, boolean.class, boolean.class);
         bookmark.setAccessible(true);
         recipeTargets = new NeiRecipeTouchTarget();
+        inventoryTargets = new ContainerItemTarget();
         gesture = new ItemTouchGesture(new ItemTouchGesture.Port() {
             public void hover(float x, float y) { new GuiTouchMouse(mc).move(x, y); }
             public void drag(TouchSample sample) { TouchInput.dragGuiTouch(sample); }
             public void cancelDrag() { TouchInput.cancelGuiTouch(); }
             public void menu() { menuOpen = true; }
+            public void tap(TouchSample down, TouchSample up) {
+                if (inventorySelection != null) {
+                    TouchInput.dragGuiTouch(down);
+                    TouchInput.dragGuiTouch(up);
+                }
+            }
         });
     }
 
@@ -106,9 +118,9 @@ public final class NeiTouchMenu {
                 }
                 if (sample.kind == TouchSample.Kind.UP || sample.kind == TouchSample.Kind.CANCEL) {
                     contacts.remove(id);
-                    if (sample.kind == TouchSample.Kind.UP && screen != null && captured >= 0
-                            && captured == hit((int)(sample.x * screen.width), (int)(sample.y * screen.height))) {
-                        select(captured);
+                    if (sample.kind == TouchSample.Kind.UP && screen != null && captured >= 0) {
+                        int row = hit((int)(sample.x * screen.width), (int)(sample.y * screen.height));
+                        if (row >= 0 && captured == actions[row]) select(row);
                     }
                 }
                 return true;
@@ -119,7 +131,7 @@ public final class NeiTouchMenu {
             if (stack != null) {
                 if (sample.kind == TouchSample.Kind.DOWN) {
                     int row = hit(x, y);
-                    contacts.put(id, row);
+                    contacts.put(id, row < 0 ? -1 : actions[row]);
                     if (menuOpen && row < 0) close();
                 }
                 return true;
@@ -127,23 +139,25 @@ public final class NeiTouchMenu {
             if (sample.kind != TouchSample.Kind.DOWN || TouchInput.guiMouseHeld()) return false;
             Widget target = panelAt(x, y);
             if (target == null) target = recipeTargets.widgetAt(gui, x, y);
-            ItemStack item = target == null ? null : target.getStackMouseOver(x, y);
+            Slot slot = target == null ? inventoryTargets.at(gui, x, y) : null;
+            // Preserve normal placement/distribution while the cursor already carries a stack.
+            if (slot != null && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
+            ItemStack item = target != null ? target.getStackMouseOver(x, y) : slot != null ? slot.getStack() : null;
             if (item == null || ItemPanels.bookmarkPanel.inEditingState()
                     || ItemPanels.itemPanel.draggedStack != null) return false;
             screen = gui;
             panel = target;
             recipeSelection = target instanceof RecipeWidget
                 ? new NeiRecipeTouchTarget.Selection((RecipeWidget) target, x, y) : null;
-            actions = recipeSelection == null ? PANEL_ACTIONS : RECIPE_ACTIONS;
+            inventorySelection = slot == null ? null : new ContainerItemTarget.Selection(gui, slot);
+            actions = inventorySelection != null ? INVENTORY_ACTIONS
+                : recipeSelection == null ? PANEL_ACTIONS : RECIPE_ACTIONS;
             menuOpen = false;
             holdContact = id;
             stack = item.copy();
             touchX = sample.x; touchY = sample.y;
             itemX = x; itemY = y;
-            width = 64;
-            for (int i = 0; i < actions.length; i++) width = Math.max(width, mc.fontRenderer.getStringWidth(label(i)) + 20);
-            left = Math.max(0, Math.min(x, gui.width - width));
-            top = Math.max(0, Math.min(y, gui.height - ROW * actions.length));
+            sizeMenu();
             contacts.put(id, -1); // Opening release must never choose the first row.
             gesture.start(sample, mc.displayWidth, mc.displayHeight);
             return true;
@@ -153,8 +167,21 @@ public final class NeiTouchMenu {
         }
     }
 
-    private boolean targetCurrent() throws IllegalAccessException {
+    private void sizeMenu() {
+        width = 64;
+        for (int i = 0; i < actions.length; i++) width = Math.max(width, mc.fontRenderer.getStringWidth(label(i)) + 20);
+        left = Math.max(0, Math.min(itemX, screen.width - width));
+        top = Math.max(0, Math.min(itemY, screen.height - ROW * actions.length));
+    }
+
+    private boolean targetCurrent() throws ReflectiveOperationException {
         if (screen == null || mc.currentScreen != screen || !Display.isActive()) return false;
+        if (inventorySelection != null) {
+            Slot current = inventoryTargets.at(screen, itemX, itemY);
+            return inventorySelection.matches(screen, current) && mc.thePlayer != null
+                && mc.thePlayer.inventory.getItemStack() == null
+                && ItemStack.areItemStacksEqual(stack, current.getStack());
+        }
         Widget currentWidget = panelAt(itemX, itemY);
         if (currentWidget == null) currentWidget = recipeTargets.widgetAt(screen, itemX, itemY);
         if (recipeSelection != null && (!(currentWidget instanceof RecipeWidget)
@@ -187,6 +214,13 @@ public final class NeiTouchMenu {
     private void select(int row) throws ReflectiveOperationException {
         if (!targetCurrent()) { close(); return; }
         int action = actions[row];
+        if (action == 6 || action == 7) {
+            actions = action == 6 ? INVENTORY_NEI_ACTIONS : INVENTORY_ACTIONS;
+            sizeMenu();
+            return;
+        }
+        if (action == 5 && (inventorySelection == null || !inventorySelection.canSplit())) return;
+        ContainerItemTarget.Selection selectedSlot = inventorySelection;
         ItemStack selected = stack;
         GuiContainer source = screen;
         new GuiTouchMouse(mc).move(touchX, touchY);
@@ -195,12 +229,17 @@ public final class NeiTouchMenu {
         else if (action == 2) GuiUsageRecipe.openRecipeGui("item", selected);
         else if (action == 3) bookmark.invoke(null, selected, false, false);
         else if (action == 4) NeiFavoriteTreeShortcut.openFavorite(source);
+        else if (action == 5) selectedSlot.split(source);
+    }
+
+    private boolean enabled(int row) {
+        return actions[row] != 5 || inventorySelection != null && inventorySelection.canSplit();
     }
 
     private String label(int row) { return I18n.format("easytouch.neiMenu." + actions[row]); }
     private void close() {
         gesture.cancel();
-        screen = null; stack = null; panel = null; recipeSelection = null;
+        screen = null; stack = null; panel = null; recipeSelection = null; inventorySelection = null;
         holdContact = null; menuOpen = false;
     }
 
@@ -219,7 +258,7 @@ public final class NeiTouchMenu {
                 int y = top + i * ROW;
                 Gui.drawRect(left, y, left + width, y + ROW, 0xf0202020);
                 if (i > 0) Gui.drawRect(left + 4, y, left + width - 4, y + 1, 0xff555555);
-                mc.fontRenderer.drawStringWithShadow(label(i), left + 10, y + (ROW - 8) / 2, 0xffffff);
+                mc.fontRenderer.drawStringWithShadow(label(i), left + 10, y + (ROW - 8) / 2, enabled(i) ? 0xffffff : 0x777777);
             }
         } finally {
             GL11.glEnable(GL11.GL_DEPTH_TEST);

@@ -9,6 +9,7 @@ public final class ItemTouchGesture {
         void drag(TouchSample sample);
         void cancelDrag();
         void menu();
+        default void tap(TouchSample down, TouchSample up) { }
     }
 
     private final Port port;
@@ -50,7 +51,10 @@ public final class ItemTouchGesture {
         }
         if (dragging) port.drag(sample);
         else if (!holding) tick(sample.timestamp); // Handles a complete hold queued in one frame.
-        if (sample.kind == TouchSample.Kind.UP) cancel();
+        if (sample.kind == TouchSample.Kind.UP) {
+            if (down != null && !dragging && !holding) port.tap(down, sample);
+            cancel();
+        }
     }
 
     public void cancel() {
