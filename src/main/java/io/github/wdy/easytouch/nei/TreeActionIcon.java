@@ -19,6 +19,21 @@ public enum TreeActionIcon {
         ".KBBKBBBBKBBK.",
         ".KBBKBBBBKBBK.",
         ".KKKKKKKKKKKK.",
+        ".............."),
+    TRY_CRAFT(
+        "..............",
+        "..............",
+        "...KK.........",
+        "...KCK........",
+        "...KCCK.......",
+        "...KCCCK......",
+        "...KCCCCK.....",
+        "...KCCCCK.....",
+        "...KCCCK......",
+        "...KCCK.......",
+        "...KCK........",
+        "...KK.........",
+        "..............",
         "..............");
 
     public static final int SIZE = 14;

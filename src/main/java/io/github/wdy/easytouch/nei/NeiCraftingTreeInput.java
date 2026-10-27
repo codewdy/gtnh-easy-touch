@@ -156,7 +156,11 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             buttonTree = (GuiCraftingTree) event.gui;
             checkedTree = null;
             buttons.clear();
-            buttons.add(new TreeButton(x, saveImage.yPosition));
+            buttons.add(new TreeButton(x, saveImage.yPosition, false));
+            // Keep the extra action clear of the centered title on narrow windows.
+            boolean beside = available >= gap + 34;
+            buttons.add(new TreeButton(beside ? x + 18 : x,
+                beside ? saveImage.yPosition : saveImage.yPosition + 18, true));
             event.buttonList.addAll(buttons);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             fail(error);
@@ -169,24 +173,28 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         event.setCanceled(true);
         if (isTree(event.gui)) {
             event.button.func_146113_a(Minecraft.getMinecraft().getSoundHandler());
-            craft((GuiCraftingTree) event.gui);
+            craft((GuiCraftingTree) event.gui, ((TreeButton) event.button).tryCraft);
         }
     }
 
     private final class TreeButton extends GuiNEIButton {
-        TreeButton(int x, int y) {
-            super(0x455443, x, y, 16, 16, I18n.format("easytouch.craftTree.buttonCraft"));
+        final boolean tryCraft;
+
+        TreeButton(int x, int y, boolean tryCraft) {
+            super(tryCraft ? 0x455444 : 0x455443, x, y, 16, 16,
+                I18n.format("easytouch.craftTree." + (tryCraft ? "buttonTryCraft" : "buttonCraft")));
+            this.tryCraft = tryCraft;
         }
 
         @Override
         public void drawButton(Minecraft mc, int mouseX, int mouseY) {
-            enabled = unavailableReason(buttonTree, false) == null;
+            enabled = unavailableReason(buttonTree, false, tryCraft) == null;
             super.drawButton(mc, mouseX, mouseY);
         }
 
         @Override
         protected void drawContent(Minecraft mc, int x, int y, boolean hovered) {
-            TreeActionIcon.CRAFT.draw(xPosition + (width - TreeActionIcon.SIZE) / 2,
+            (tryCraft ? TreeActionIcon.TRY_CRAFT : TreeActionIcon.CRAFT).draw(xPosition + (width - TreeActionIcon.SIZE) / 2,
                 yPosition + (height - TreeActionIcon.SIZE) / 2, enabled, hovered);
         }
     }
@@ -202,8 +210,8 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             if (x >= button.xPosition && x < button.xPosition + button.width
                     && y >= button.yPosition && y < button.yPosition + button.height) {
                 tips.add(button.displayString);
-                tips.add(I18n.format("easytouch.craftTree.craftHint"));
-                String reason = unavailableReason(buttonTree, false);
+                tips.add(I18n.format("easytouch.craftTree." + (button.tryCraft ? "tryCraftHint" : "craftHint")));
+                String reason = unavailableReason(buttonTree, false, button.tryCraft);
                 if (reason != null) tips.add(I18n.format("easytouch.craftTree." + reason));
                 break;
             }
@@ -211,7 +219,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         return tips;
     }
 
-    private String unavailableReason(GuiCraftingTree tree, boolean refresh) {
+    private String unavailableReason(GuiCraftingTree tree, boolean refresh, boolean tryCraft) {
         if (failed) return "unavailable";
         if (!isTree(tree)) return "inactive";
         try {
@@ -221,6 +229,12 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             GuiContainer container = tree.getFirstScreen();
             if (container == null || container == tree || container.inventorySlots == null
                     || container.inventorySlots.inventorySlots.isEmpty()) return "noContainer";
+            if (tryCraft) {
+                BookmarkGrid bookmarks = (BookmarkGrid) grid.get(tree);
+                int selectedGroup = groupId.getInt(tree);
+                return bookmarks == null || bookmarks.getGroup(selectedGroup) == null
+                    || !bookmarks.isCraftingMode(selectedGroup) ? "noChain" : null;
+            }
             long now = Minecraft.getSystemTime();
             // Cache the read-only probe; do not rebuild the recipe chain every frame.
             if (refresh || checkedTree != tree || now - checkedAt >= 250) {
@@ -277,9 +291,9 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         return true;
     }
 
-    private void craft(GuiCraftingTree tree) {
+    private void craft(GuiCraftingTree tree, boolean tryCraft) {
         try {
-            String reason = unavailableReason(tree, true);
+            String reason = unavailableReason(tree, true, tryCraft);
             if (reason != null) {
                 message(reason);
                 return;
@@ -306,7 +320,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
 
             // The button's press/release must finish in the tree. The inventory synchronization
             // reply must also finish before NEI starts moving stacks on its worker thread.
-            pending = new PendingCraft(tree, container, plan, bookmarks, selectedGroup);
+            pending = new PendingCraft(tree, container, plan, bookmarks, selectedGroup, tryCraft);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             fail(error);
         }
@@ -344,11 +358,12 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         final BookmarkGrid bookmarks;
         final int selectedGroup;
         final BookmarkGroup bookmarkGroup;
+        final boolean tryCraft;
         final DeferredCraftingLaunch launch;
         ContainerSyncBarrier sync;
 
         PendingCraft(GuiCraftingTree tree, GuiContainer target, RecipeChainMath plan,
-                BookmarkGrid bookmarks, int selectedGroup) {
+                BookmarkGrid bookmarks, int selectedGroup, boolean tryCraft) {
             this.tree = tree;
             this.target = target;
             this.inventory = target.inventorySlots;
@@ -356,6 +371,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             this.plan = plan;
             this.bookmarks = bookmarks;
             this.selectedGroup = selectedGroup;
+            this.tryCraft = tryCraft;
             this.bookmarkGroup = bookmarks.getGroup(selectedGroup);
             this.launch = new DeferredCraftingLaunch(this, 10000);
         }
@@ -400,10 +416,10 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
                 return false;
             }
             try {
-                // Recheck after the server's snapshot arrives; a stale UI preview must not
-                // launch an empty task or delete its bookmarks.
+                // Recheck after synchronization. Try Craft skips only the feasibility probe;
+                // it still requires the original group and all normal launch safeguards.
                 if (bookmarks.getGroup(selectedGroup) != bookmarkGroup
-                        || !NeiCraftingAvailability.canStart(bookmarks, selectedGroup, target)) {
+                        || (!tryCraft && !NeiCraftingAvailability.canStart(bookmarks, selectedGroup, target))) {
                     message("notCraftable");
                     return false;
                 }
