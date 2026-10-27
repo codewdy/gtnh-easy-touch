@@ -7,7 +7,6 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 import io.github.wdy.easytouch.TouchConfig;
 import io.github.wdy.easytouch.ClientInput;
 import io.github.wdy.easytouch.input.TouchMouse;
-import static org.lwjgl.sdl.SDLMouse.SDL_BUTTON_LMASK;
 import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
@@ -46,10 +45,13 @@ public final class TouchInput {
     private final TouchConfig config;
     private boolean active;
     private boolean openRequested;
-    private final TouchMouse guiMouse = new TouchMouse(new GuiTouchMouse(mc));
+    private final GuiTouchMouse guiMousePort;
+    private final TouchMouse guiMouse;
 
     private TouchInput(TouchConfig config) {
         this.config = config;
+        guiMousePort = new GuiTouchMouse(mc, config);
+        guiMouse = new TouchMouse(guiMousePort);
         logEvents = config.touchLogEvents;
         try {
             if (SDL_WasInit(SDL_INIT_EVENTS) == 0 || Display.sdlWindowId == 0) {
@@ -123,7 +125,7 @@ public final class TouchInput {
     private void syncMouseButtons() {
         if (active && mouseFilter != null && "ready".equals(status)) {
             // SDL's aggregate includes the synthetic mouse we filtered. Publish only real buttons + our GUI owner.
-            Mouse.sdlMouseButtonFlags = mouseFilter.physicalButtons() | (guiMouse.held() ? SDL_BUTTON_LMASK : 0)
+            Mouse.sdlMouseButtonFlags = mouseFilter.physicalButtons() | (guiMouse.held() ? guiMousePort.buttonMask() : 0)
                 | io.github.wdy.easytouch.layout.TouchButtons.instance.mouseFlags();
         }
     }

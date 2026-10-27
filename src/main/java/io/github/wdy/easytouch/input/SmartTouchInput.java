@@ -21,10 +21,14 @@ public final class SmartTouchInput {
         this.resolver = new TargetResolver(config);
     }
 
-    /** Resolve the action for a smart tap or secondary button; world long presses always attack. */
+    /** Resolve the action for a smart tap or secondary button; primary-mode world long presses always attack. */
     public Action touchPrimary() {
         return config.enabled && !mc.thePlayer.isSneaking()
             ? resolver.resolve(mc) : Action.ATTACK;
+    }
+
+    public Action touchTap() {
+        return config.secondaryTap ? touchSecondary() : touchPrimary();
     }
 
     /** Sneaking or disabled smart makes primary ATTACK, so secondary is always USE. */
@@ -36,7 +40,7 @@ public final class SmartTouchInput {
 
     public void hud(RenderGameOverlayEvent.Text event) {
         if (!config.touchEnabled || !config.enabled || !config.hud || !input.inWorld() || mc.gameSettings.hideGUI) return;
-        if (mc.thePlayer.isSneaking() || resolver.resolve(mc) != Action.USE) return;
+        if (touchTap() != Action.USE) return;
         String text = I18n.format("easytouch.hud");
         mc.fontRenderer.drawStringWithShadow(text,
             (event.resolution.getScaledWidth() - mc.fontRenderer.getStringWidth(text)) / 2,

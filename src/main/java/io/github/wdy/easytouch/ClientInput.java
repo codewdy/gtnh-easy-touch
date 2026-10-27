@@ -41,7 +41,7 @@ public final class ClientInput {
         this.config = config;
         smartTouch = new SmartTouchInput(input, config);
         new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); }, smartTouch::touchSecondary);
-        final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchPrimary);
+        final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchTap);
         touchLook = new TouchLook(new TouchLook.Port() {
             public boolean inWorld() { return input.inWorld(); }
             public int width() { return input.mc.displayWidth; }

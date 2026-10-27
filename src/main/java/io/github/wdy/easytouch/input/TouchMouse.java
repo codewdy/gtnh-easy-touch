@@ -2,7 +2,7 @@ package io.github.wdy.easytouch.input;
 
 import io.github.wdy.easytouch.touch.TouchSample;
 
-/** Non-world touch behaves like one left mouse button, with immediate press and normal GUI dragging. */
+/** Non-world touch behaves like one selected mouse button, with immediate press and normal GUI dragging. */
 public final class TouchMouse {
     public interface Port {
         boolean active();

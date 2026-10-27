@@ -11,8 +11,12 @@ import org.lwjglx.opengl.Display;
 @Lwjgl3Aware
 public final class GuiTouchMouse implements TouchMouse.Port {
     private final Minecraft mc;
+    private final io.github.wdy.easytouch.TouchConfig config;
+    private int heldButton;
 
-    public GuiTouchMouse(Minecraft mc) { this.mc = mc; }
+    public GuiTouchMouse(Minecraft mc) { this(mc, null); }
+    public GuiTouchMouse(Minecraft mc, io.github.wdy.easytouch.TouchConfig config) { this.mc = mc; this.config = config; }
+    public int buttonMask() { return heldButton == 1 ? 4 : 1; }
     @Override public boolean active() { return Display.isActive() && mc.currentScreen != null; }
 
     @Override public void move(float x, float y) {
@@ -26,5 +30,10 @@ public final class GuiTouchMouse implements TouchMouse.Port {
         }
     }
 
-    @Override public void button(boolean down) { if (down || !TouchInput.mouseButtonDown(0) && !io.github.wdy.easytouch.layout.TouchButtons.instance.mouseHeld(0)) Mouse.addButtonEvent(0, down); }
+    @Override public void button(boolean down) {
+        if (down) heldButton = config != null && config.secondaryTap ? 1 : 0;
+        if (down || !TouchInput.mouseButtonDown(heldButton)
+                && !io.github.wdy.easytouch.layout.TouchButtons.instance.mouseHeld(heldButton))
+            Mouse.addButtonEvent(heldButton, down);
+    }
 }

@@ -70,6 +70,7 @@ public final class TouchButtons {
             if (item == 1) config.toggle();
             else if (item == 2) config.toggleButtons();
             else if (item == 3 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
+            else if (item == 5) config.toggleSecondaryTap();
             else if (item == 4) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
@@ -245,7 +246,12 @@ public final class TouchButtons {
 
     private void drawMenu(int w, int h) {
         int x = menu.left(w), y = menu.top(h);
-        if (available()) drawTouchpadToggle(menu.touchpadLeft(w),y);
+        if (available()) {
+            drawTouchpadToggle(menu.touchpadLeft(w),y);
+            int sx = menu.secondaryLeft(w);
+            Circle.button(sx,y,GlobalTouchMenu.SIZE,config.secondaryTap ? 0xC028594F : 0x40253747,config.secondaryTap,false);
+            Circle.text(mc,config.secondaryTap ? "副" : "主",sx+GlobalTouchMenu.SIZE/2f,y+GlobalTouchMenu.SIZE/2f-3,GlobalTouchMenu.SIZE-4,true,0xECF4FA);
+        }
         Circle.button(x, y, GlobalTouchMenu.SIZE, 0x40253747,menu.isOpen(),false);
         for (int i=0; i<3; i++) Gui.drawRect(x+6, y+6+i*5, x+18, y+8+i*5, 0xFFE0E8EF);
         if (!menu.isOpen()) return;

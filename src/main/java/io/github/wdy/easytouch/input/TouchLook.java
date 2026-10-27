@@ -2,7 +2,7 @@ package io.github.wdy.easytouch.input;
 
 import io.github.wdy.easytouch.touch.TouchSample;
 
-/** One native contact owns a tap, attack hold, or look drag; dragging preserves an active hold. Times use SDL's nanosecond clock. */
+/** One native contact owns a tap, action hold, or look drag; dragging preserves an active hold. Times use SDL's nanosecond clock. */
 public final class TouchLook {
     public interface Port {
         boolean inWorld();
