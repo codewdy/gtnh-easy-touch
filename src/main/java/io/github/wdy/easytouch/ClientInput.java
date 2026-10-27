@@ -62,6 +62,7 @@ public final class ClientInput {
     public static void installNeiCrafting() {
         if (!Loader.isModLoaded("NotEnoughItems")) return;
         try {
+            io.github.wdy.easytouch.nei.NeiTouchMenu.install();
             NeiCraftingTreeInput.install();
         } catch (RuntimeException | LinkageError error) {
             // Loading the optional adapter itself can fail before its install() body is entered.

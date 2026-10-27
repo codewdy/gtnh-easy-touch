@@ -15,7 +15,6 @@ public final class TouchLook {
     }
 
     private static final long TAP_NS = 250_000_000L;
-    private static final long HOLD_NS = 500_000_000L;
     private final Port port;
     private boolean active, dragging, holding;
     private long deviceId, fingerId, started;
@@ -30,7 +29,7 @@ public final class TouchLook {
 
     public void tick(long now) {
         if (!port.inWorld()) cancel();
-        else if (active && !dragging && !holding && now - started >= HOLD_NS) {
+        else if (active && !dragging && !holding && now - started >= TouchTiming.HOLD_NS) {
             holding = true;
             port.press();
         }
@@ -78,7 +77,7 @@ public final class TouchLook {
         if (sample.kind == TouchSample.Kind.UP) {
             long duration = sample.timestamp - started;
             // A whole stationary hold can arrive in one batch after a stalled frame.
-            if (!dragging && !holding && duration >= 0 && (duration <= TAP_NS || duration >= HOLD_NS)) {
+            if (!dragging && !holding && duration >= 0 && (duration <= TAP_NS || duration >= TouchTiming.HOLD_NS)) {
                 port.click();
             }
             cancel();

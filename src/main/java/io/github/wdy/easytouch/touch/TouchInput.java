@@ -29,6 +29,11 @@ import static org.lwjgl.sdl.SDLInit.SDL_WasInit;
 @Lwjgl3Aware
 public final class TouchInput {
     private static TouchInput installed;
+    private static java.util.function.Predicate<TouchSample> guiInterceptor;
+
+    public static void setGuiInterceptor(java.util.function.Predicate<TouchSample> interceptor) {
+        guiInterceptor = interceptor;
+    }
     private SdlTouchMouseFilter mouseFilter;
     private static final Logger LOG = LogManager.getLogger("GTNH Easy Touch");
     private final Minecraft mc = Minecraft.getMinecraft();
@@ -87,6 +92,14 @@ public final class TouchInput {
 
     public static boolean guiMouseHeld() { return installed != null && installed.guiMouse.held(); }
 
+    /** Lets an item gesture use the same mouse owner and physical-button merging as ordinary GUI touch. */
+    public static void dragGuiTouch(TouchSample sample) {
+        if (installed != null) {
+            installed.guiMouse.accept(sample);
+            installed.syncMouseButtons();
+        }
+    }
+
     public static void cancelGuiTouch() {
         if (installed != null) { installed.guiMouse.cancel(); installed.syncMouseButtons(); }
     }
@@ -131,6 +144,9 @@ public final class TouchInput {
             tracker.accept(sample);
             TouchInputEvent forwarded = new TouchInputEvent(sample);
             forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
+            if (guiInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)) {
+                forwarded.consumed |= guiInterceptor.test(sample);
+            }
             if (!forwarded.consumed) guiMouse.accept(sample);
             MinecraftForge.EVENT_BUS.post(forwarded);
             if (logEvents && sample.kind != TouchSample.Kind.MOVE) {

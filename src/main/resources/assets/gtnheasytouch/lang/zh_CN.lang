@@ -33,3 +33,8 @@ easytouch.craftTree.heldItem=请先放下鼠标上拿着的物品，再开始合
 easytouch.craftTree.syncTimeout=等待工作台物品同步超时，未开始合成；请重新打开工作台后重试。
 easytouch.craftTree.unavailable=配方树合成按钮与当前 NEI 不兼容，已停用此功能；详情见日志。
 easytouch.craftTree.favoriteShortcut=根据收藏配方打开合成树
+
+easytouch.neiMenu.1=来源
+easytouch.neiMenu.2=用途
+easytouch.neiMenu.3=书签
+easytouch.neiMenu.4=合成
