@@ -10,7 +10,7 @@ import java.util.*;
 /** User layout is saved atomically; the editor works on a separate copy. */
 public final class TouchLayout {
     private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
-    public int version = 4;
+    public int version = 7;
     public List<Button> buttons = new ArrayList<Button>();
     public float wheelX = -1, wheelY = -1, wheelScale = 1;
     public boolean wheelVisible = true;
@@ -45,6 +45,8 @@ public final class TouchLayout {
             TouchLayout layout = JSON.fromJson(object, TouchLayout.class);
             if (layout == null || layout.buttons == null) throw new IOException("Invalid touch layout");
             layout.buttons.removeAll(Collections.singleton(null));
+            // Mouse control now belongs to the global menu, not a layout mapping.
+            layout.buttons.removeIf(b -> b.mode == 4);
             for (Button b : layout.buttons) {
                 b.keys = ChordState.normalize(b.keys);
                 if (legacy && b.opacity == 55) b.opacity = 30;
@@ -67,7 +69,7 @@ public final class TouchLayout {
                 if (b.binding == null) b.binding = "";
             }
             if (needsSecondary) layout.addSecondary();
-            layout.version = 4;
+            layout.version = 7;
             layout.wheelScale = Float.isFinite(layout.wheelScale) ? Math.max(.5f, Math.min(2, layout.wheelScale)) : 1;
             layout.wheelX = layout.wheelX < 0 ? -1 : clamp(layout.wheelX);
             layout.wheelY = layout.wheelY < 0 ? -1 : clamp(layout.wheelY);

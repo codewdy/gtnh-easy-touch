@@ -8,6 +8,7 @@ public final class MovementWheelHud {
     private MovementWheelHud() { }
 
     public static void draw(Minecraft mc, TouchMovement movement, int width, int height) {
+        if (io.github.wdy.easytouch.layout.TouchButtons.instance.mouseControlActive()) return;
         if (!io.github.wdy.easytouch.layout.TouchButtons.instance.layout.wheelVisible) return;
         int x = Math.round(TouchMovement.centerX(width, height));
         int y = Math.round(TouchMovement.centerY(width, height));

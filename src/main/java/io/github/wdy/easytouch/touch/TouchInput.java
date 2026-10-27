@@ -120,10 +120,20 @@ public final class TouchInput {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void render(TickEvent.RenderTickEvent event) {
         if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
+        // Display.update overwrites SDL button flags even on frames without a client tick.
+        // Restore our owners before Mouse Tweaks (NORMAL priority) samples right-button state.
         syncMouseButtons();
+        if (event.phase == TickEvent.Phase.START && Display.isActive() && mc.currentScreen != null
+                && io.github.wdy.easytouch.layout.TouchButtons.instance.mouseControlActive()) {
+            // Match physical pointer sampling at render cadence, not only the 20 Hz client tick.
+            // Button transitions remain queued for vanilla's next input loop.
+            dispatchPending();
+            io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouseMotion();
+            syncMouseButtons();
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -140,6 +150,17 @@ public final class TouchInput {
             try { source.close(); }
             catch (RuntimeException | LinkageError error) { LOG.warn("[Touch] Cannot unregister event watch.", error); }
         }
+        dispatchPending();
+        io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
+        if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
+        syncMouseButtons();
+        if (openRequested) {
+            openRequested = false;
+            if (Display.isActive()) mc.displayGuiScreen(new TouchDebugScreen(this, mc.currentScreen));
+        }
+    }
+
+    private void dispatchPending() {
         for (TouchSample sample : queue.drain()) {
             tracker.accept(sample);
             TouchInputEvent forwarded = new TouchInputEvent(sample);
@@ -153,13 +174,6 @@ public final class TouchInput {
                 LOG.info("[Touch] {} device={} finger={} simulated={} window={} x={} y={}",
                     sample.kind, sample.deviceId, sample.fingerId, sample.simulated(), sample.windowId, sample.x, sample.y);
             }
-        }
-        io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
-        if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
-        syncMouseButtons();
-        if (openRequested) {
-            openRequested = false;
-            if (Display.isActive()) mc.displayGuiScreen(new TouchDebugScreen(this, mc.currentScreen));
         }
     }
 

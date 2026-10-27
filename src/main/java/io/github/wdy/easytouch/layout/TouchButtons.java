@@ -36,6 +36,7 @@ public final class TouchButtons {
     private final VirtualKeyboard keyboard = new VirtualKeyboard();
     private final VirtualMouse mouse = new VirtualMouse(keyboard);
     private final ChordState chords;
+    private final MouseControl mouseControl;
     private final Map<String, TouchLayout.Button> contacts = new HashMap<String, TouchLayout.Button>();
     private final Map<TouchLayout.Button, List<Integer>> held = new IdentityHashMap<TouchLayout.Button, List<Integer>>();
     public boolean openRequested;
@@ -50,17 +51,29 @@ public final class TouchButtons {
             if (down && mc.currentScreen == null) source.holdCode(code);
             else if (!down) source.releaseCode(code);
         });
+        mouseControl = new MouseControl((code, down) -> {
+            if (down) chords.press(Collections.singletonList(code));
+            else chords.release(Collections.singletonList(code));
+        }, mouse::motion);
         reset = () -> { cancel(); resetInputs.run(); TouchInput.cancelGuiTouch(); };
         mappingMenu = new MappingMenu(option -> {
             List<Integer> combination = keys(option);
             chords.press(combination);
             chords.release(combination);
         });
-        menu = new GlobalTouchMenu(reset, item -> {
+        menu = new GlobalTouchMenu(() -> {
+            if (mouseControl.isOpen()) mouseControl.releaseInputs();
+            else reset.run();
+        }, item -> {
+            boolean wasMouse = mouseControl.isOpen();
             reset.run();
             if (item == 1) config.toggle();
             else if (item == 2) config.toggleButtons();
             else if (item == 3 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
+            else if (item == 4) {
+                if (wasMouse) mouseControl.reset();
+                else if (available()) mouseControl.open();
+            }
         });
         try { layout = TouchLayout.load(file); }
         catch (IOException ex) {
@@ -91,11 +104,12 @@ public final class TouchButtons {
         return 0;
     }
     private boolean available() {
-        return enabled && Display.isActive() && !(mc.currentScreen instanceof LayoutEditor)
+        return enabled && Display.isActive() && (!(mc.currentScreen instanceof LayoutEditor) || mouseControl.isOpen())
             && (mc.currentScreen != null || (mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus && !mc.gameSettings.hideGUI));
     }
     public void syncKeyboard() { if (mc.currentScreen == null && mc.inGameHasFocus && Display.isActive()) keyboard.syncBindings(); }
-    public boolean buttonsVisible() { return config.buttonsVisible; }
+    public boolean buttonsVisible() { return config.buttonsVisible && !mouseControl.isOpen(); }
+    public boolean mouseControlActive() { return mouseControl.isOpen(); }
     private boolean menuAvailable() {
         return enabled && Display.isActive() && (mc.currentScreen != null || mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus);
     }
@@ -106,8 +120,9 @@ public final class TouchButtons {
         sizeMenus(r.getScaledWidth(), r.getScaledHeight());
         if (available() && config.buttonsVisible && mappingMenu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
         if (menu.accept(s, r.getScaledWidth(), r.getScaledHeight())) return true;
-        if (!available() || !config.buttonsVisible) { cancel(); return false; }
+        if (!available() || !config.buttonsVisible && !mouseControl.isOpen()) { cancel(); return false; }
         if (s.simulated() || !s.valid()) return false;
+        if (mouseControl.isOpen()) return mouseControl.accept(s, r.getScaledWidth(), r.getScaledHeight());
         String id = s.deviceId + ":" + s.fingerId;
         TouchLayout.Button b = contacts.get(id);
         if (b != null) {
@@ -115,7 +130,9 @@ public final class TouchButtons {
                 contacts.remove(id);
                 if (b.mode == 3 && s.kind == TouchSample.Kind.UP
                         && b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) {
-                    reset.run(); mappingMenu.open(b); return true;
+                    reset.run();
+                    mappingMenu.open(b);
+                    return true;
                 }
                 if ((b.mode == 1 && !contacts.containsValue(b)) || s.kind == TouchSample.Kind.CANCEL) release(b);
             }
@@ -144,8 +161,11 @@ public final class TouchButtons {
     public int mouseFlags() { return mouse.flags(); }
     public boolean mouseHeld(int button) { return mouse.held(button); }
     public void flushMouse() { mouse.flush(); }
+    public void flushMouseMotion() { mouse.flushMotion(); }
     public void cancel() {
         mappingMenu.reset();
+        // Clear gesture/button ownership without changing the selected input mode.
+        mouseControl.releaseInputs();
         mouse.cancel();
         for (int code : keyboard.cancel()) {
             KeyBinding.setKeyBindState(code, mc.currentScreen == null && Display.isActive() && (code < 0 ? TouchInput.mouseButtonDown(code+100) : VirtualKeyboard.physicalDown(code)));
@@ -155,13 +175,14 @@ public final class TouchButtons {
     }
     public void draw(int w, int h) {
         sizeMenus(w,h);
-        if (available() && config.buttonsVisible)
+        if (available() && buttonsVisible())
         for (TouchLayout.Button b : layout.buttons) if (visible(b)) {
             drawButton(mc, b, w, h, held.containsKey(b), false);
             if (b.mode == 3 ? b.options.isEmpty() : keys(b).isEmpty()) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
         }
         if (menuAvailable()) drawMenu(w, h);
         if (available() && config.buttonsVisible && mappingMenu.isOpen()) drawMappingMenu(w,h);
+        if (available() && mouseControl.isOpen()) mouseControl.draw(w,h);
     }
     private static final int MENU_PADDING = 8;
     private String[] menuLabels() {
@@ -175,6 +196,7 @@ public final class TouchButtons {
     }
     /** Use the same font measurements before drawing and hit testing, including after GUI resize. */
     private void sizeMenus(int w, int h) {
+        menu.touchpadAvailable(available());
         int longest=0;
         for (String label : menuLabels()) longest=Math.max(longest,textWidth(label));
         menu.panelWidth(fittedMenuWidth(longest,w));
@@ -222,6 +244,7 @@ public final class TouchButtons {
 
     private void drawMenu(int w, int h) {
         int x = menu.left(w), y = menu.top(h);
+        if (available()) drawTouchpadToggle(menu.touchpadLeft(w),y);
         Circle.button(x, y, GlobalTouchMenu.SIZE, 0x40253747,menu.isOpen(),false);
         for (int i=0; i<3; i++) Gui.drawRect(x+6, y+6+i*5, x+18, y+8+i*5, 0xFFE0E8EF);
         if (!menu.isOpen()) return;
@@ -233,17 +256,36 @@ public final class TouchButtons {
             Circle.text(mc,labels[i],x+MENU_PADDING,y+7,menu.panelWidth()-MENU_PADDING*2,false,0xECF4FA);
         }
     }
+    private void drawTouchpadToggle(int x,int y) {
+        boolean active=mouseControl.isOpen();
+        Circle.button(x,y,GlobalTouchMenu.SIZE,active ? 0xC028594F : 0x40253747,active,false);
+        int color=active ? 0xFF88FFBB : 0xFFE0E8EF;
+        // Touch surface outline and the divided click strip below it.
+        Gui.drawRect(x+5,y+5,x+19,y+6,color);
+        Gui.drawRect(x+5,y+5,x+6,y+19,color);
+        Gui.drawRect(x+18,y+5,x+19,y+19,color);
+        Gui.drawRect(x+5,y+18,x+19,y+19,color);
+        Gui.drawRect(x+6,y+14,x+18,y+15,color);
+        Gui.drawRect(x+11,y+15,x+12,y+18,color);
+    }
     public static void drawButton(Minecraft mc, TouchLayout.Button b, int w, int h, boolean active, boolean selected) {
         int x = b.left(w), y = b.top(h), alpha = b.opacity * 255 / 100;
         Circle.button(x,y,b.size,(alpha << 24) | (active ? 0x28594F : 0x253747),active,selected);
         Circle.text(mc,b.label,x+b.size/2f,y+b.size/2f-3,b.size-4,true,0xECF4FA);
     }
     @SubscribeEvent public void render(TickEvent.RenderTickEvent e) { keyboard.refresh(); }
-    @SubscribeEvent public void gui(GuiOpenEvent e) { menu.reset(); cancel(); }
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void gui(GuiOpenEvent e) {
+        menu.reset();
+        cancel();
+        // A non-null destination is another GUI, including the layout editor.
+        // The following queued RESET must also only clear inputs, not the mode.
+        if (e.gui == null) mouseControl.reset();
+    }
     @SubscribeEvent public void tick(TickEvent.ClientTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         if (!menuAvailable()) menu.reset();
-        if (!available() || !config.buttonsVisible) cancel();
+        if (!available() || !config.buttonsVisible && !mouseControl.isOpen()) cancel();
         keyboard.mouseModifiers(Collections.emptySet());
         if (openRequested) { openRequested = false; cancel(); mc.displayGuiScreen(new LayoutEditor(this, mc.currentScreen)); }
     }
