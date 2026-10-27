@@ -4,6 +4,7 @@ import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.MinecraftInput;
 import io.github.wdy.easytouch.input.SmartTouchInput;
 import io.github.wdy.easytouch.input.TouchLook;
+import io.github.wdy.easytouch.input.TouchHotbar;
 import io.github.wdy.easytouch.input.TouchMovement;
 import io.github.wdy.easytouch.input.MovementWheelHud;
 import net.minecraft.client.gui.ScaledResolution;
@@ -29,6 +30,7 @@ import org.apache.logging.log4j.Level;
 public final class ClientInput {
     private final MinecraftInput input = new MinecraftInput(Minecraft.getMinecraft());
     private final KeyStateMerger keys = new KeyStateMerger(input);
+    private final TouchHotbar hotbar = new TouchHotbar(slot -> input.mc.thePlayer.inventory.currentItem = slot);
     private final TouchMovement movement = new TouchMovement(keys.newSource());
     private final TouchConfig config;
     private final SmartTouchInput smartTouch;
@@ -73,6 +75,7 @@ public final class ClientInput {
     private void cancelInputs() {
         touchLook.cancel();
         movement.cancel();
+        hotbar.cancel();
         touchKeys.clear();
         keys.discardClicks();
     }
@@ -81,7 +84,10 @@ public final class ClientInput {
     public void touch(TouchInputEvent event) {
         if (event.consumed) { keys.sync(input.inWorld()); return; }
         ScaledResolution resolution = new ScaledResolution(input.mc, input.mc.displayWidth, input.mc.displayHeight);
-        if (!movement.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
+        if (hotbar.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
+                config.touchEnabled && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
+            event.consumed = true;
+        } else if (!movement.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
                 config.touchEnabled && config.buttonsVisible && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
             touchLook.accept(event.sample);
         }
@@ -121,6 +127,7 @@ public final class ClientInput {
     public void tick(TickEvent.ClientTickEvent event) {
         if (!input.inWorld()) cancelInputs();
         if (!config.touchEnabled || !config.buttonsVisible || input.mc.gameSettings.hideGUI) movement.cancel();
+        if (!config.touchEnabled || input.mc.gameSettings.hideGUI) hotbar.cancel();
         if (event.phase == TickEvent.Phase.START) {
             touchLook.tick(TouchInput.nanoTime());
         }
