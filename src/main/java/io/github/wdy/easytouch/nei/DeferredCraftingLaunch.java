@@ -10,7 +10,6 @@ public final class DeferredCraftingLaunch {
         boolean syncApplied();
         void closeSync();
         boolean startCrafting();
-        void removeCraftingGroup();
         void syncTimedOut();
     }
 
@@ -18,14 +17,12 @@ public final class DeferredCraftingLaunch {
 
     private final Context context;
     private final long timeoutMillis;
-    private final boolean removeGroup;
     private State state = State.WAIT_RELEASE;
     private long deadline;
 
-    public DeferredCraftingLaunch(Context context, long timeoutMillis, boolean removeGroup) {
+    public DeferredCraftingLaunch(Context context, long timeoutMillis) {
         this.context = context;
         this.timeoutMillis = timeoutMillis;
-        this.removeGroup = removeGroup;
     }
 
     /** Called only at client tick END, after GUI input and incoming packets have been processed. */
@@ -52,7 +49,7 @@ public final class DeferredCraftingLaunch {
             }
         } else if (context.inputReleased()) {
             cancel();
-            if (context.startCrafting() && removeGroup) context.removeCraftingGroup();
+            context.startCrafting();
         }
     }
 

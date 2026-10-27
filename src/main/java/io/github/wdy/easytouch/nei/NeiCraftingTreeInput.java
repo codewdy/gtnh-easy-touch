@@ -42,29 +42,12 @@ import org.lwjgl.opengl.Display;
 
 /** Optional NEI 2.8.155 integration for GTNH 2.9.0 RC2. Loaded only when NEI is present. */
 public final class NeiCraftingTreeInput implements IContainerInputHandler, IContainerTooltipHandler {
-    private enum Action {
-        CRAFT_REMOVE("buttonRemove", "removeHint", TreeActionIcon.CRAFT_REMOVE),
-        CRAFT_KEEP("buttonKeep", "keepHint", TreeActionIcon.CRAFT_KEEP),
-        DELETE_EXIT("buttonDeleteExit", "deleteExitHint", TreeActionIcon.DELETE_EXIT);
-
-        final String label;
-        final String hint;
-        final TreeActionIcon icon;
-        Action(String label, String hint, TreeActionIcon icon) {
-            this.label = label;
-            this.hint = hint;
-            this.icon = icon;
-        }
-    }
-
     private final Field grid;
     private final Field groupId;
     private final Field searchField;
-    private final Field previousScreen;
     private final NeiTreeQuantityScroll quantityScroll;
     private boolean failed;
     private PendingCraft pending;
-    private PendingDeletion pendingDeletion;
     private GuiCraftingTree buttonTree;
     private final List<TreeButton> buttons = new ArrayList<>();
     private GuiCraftingTree checkedTree;
@@ -76,7 +59,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         grid = field("grid");
         groupId = field("groupId");
         searchField = field("searchField");
-        previousScreen = field("prevGui");
         quantityScroll = new NeiTreeQuantityScroll();
     }
 
@@ -106,6 +88,34 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     }
 
     @SubscribeEvent
+    public void recipeButtons(codechicken.nei.recipe.GuiRecipeButton.UpdateRecipeButtonsEvent.Post event) {
+        // The native heart handles Shift+T before our last-key callback. Replace only
+        // NEI's own button; keep normal favorite clicks and Shift+A bookmark saving intact.
+        for (int i = 0; i < event.buttonList.size(); i++) {
+            codechicken.nei.recipe.GuiRecipeButton original = event.buttonList.get(i);
+            if (original.getClass() != codechicken.nei.recipe.GuiFavoriteButton.class) continue;
+            event.buttonList.set(i, new codechicken.nei.recipe.GuiFavoriteButton(
+                    original.handlerRef, original.xPosition, original.yPosition) {
+                @Override
+                public void lastKeyTyped(char keyChar, int keyCode) {
+                    if (keyCode == KeyManager.getKeyCode(NeiFavoriteTreeShortcut.KEY)
+                            && KeyManager.isHashDown(NeiFavoriteTreeShortcut.KEY, NEIClientUtils.SHIFT_HASH)) {
+                        if (failed || org.lwjgl.input.Keyboard.isRepeatEvent()
+                                || !NeiFavoriteTreeShortcut.canUse((GuiContainer) event.gui)) return;
+                        try {
+                            NeiFavoriteTreeShortcut.openRecipe(this);
+                        } catch (RuntimeException | LinkageError error) {
+                            fail(error);
+                        }
+                    } else {
+                        super.lastKeyTyped(keyChar, keyCode);
+                    }
+                }
+            });
+        }
+    }
+
+    @SubscribeEvent
     @SuppressWarnings("unchecked")
     public void initGui(GuiScreenEvent.InitGuiEvent.Post event) {
         if (failed || !(event.gui instanceof GuiCraftingTree)) return;
@@ -120,21 +130,16 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             }
             if (saveImage == null) return;
             Minecraft mc = Minecraft.getMinecraft();
-            Action[] actions = Action.values();
             int saveImageRight = saveImage.xPosition + saveImage.width;
             int titleLeft = (event.gui.width - mc.fontRenderer.getStringWidth(
                 I18n.format("nei.bookmark.tree.title"))) / 2;
             int available = Math.min(titleLeft, search.xPosition - 2) - saveImageRight;
-            int gap = available >= actions.length * 20 + 4 ? 4 : 1;
+            int gap = available >= 24 ? 4 : 1;
             int x = saveImageRight + gap;
             buttonTree = (GuiCraftingTree) event.gui;
             checkedTree = null;
             buttons.clear();
-            for (Action action : actions) {
-                buttons.add(new TreeButton(x, saveImage.yPosition,
-                    I18n.format("easytouch.craftTree." + action.label), action));
-                x += 16 + gap;
-            }
+            buttons.add(new TreeButton(x, saveImage.yPosition));
             event.buttonList.addAll(buttons);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             fail(error);
@@ -147,30 +152,24 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         event.setCanceled(true);
         if (isTree(event.gui)) {
             event.button.func_146113_a(Minecraft.getMinecraft().getSoundHandler());
-            Action action = ((TreeButton) event.button).action;
-            if (action == Action.DELETE_EXIT) deleteAndExit((GuiCraftingTree) event.gui);
-            else craft((GuiCraftingTree) event.gui, action == Action.CRAFT_REMOVE);
+            craft((GuiCraftingTree) event.gui);
         }
     }
 
     private final class TreeButton extends GuiNEIButton {
-        final Action action;
-
-        TreeButton(int x, int y, String label, Action action) {
-            super(0x455443 + action.ordinal(), x, y, 16, 16, label);
-            this.action = action;
+        TreeButton(int x, int y) {
+            super(0x455443, x, y, 16, 16, I18n.format("easytouch.craftTree.buttonCraft"));
         }
 
         @Override
         public void drawButton(Minecraft mc, int mouseX, int mouseY) {
-            enabled = (action == Action.DELETE_EXIT ? deletionUnavailableReason(buttonTree)
-                : unavailableReason(buttonTree, false)) == null;
+            enabled = unavailableReason(buttonTree, false) == null;
             super.drawButton(mc, mouseX, mouseY);
         }
 
         @Override
         protected void drawContent(Minecraft mc, int x, int y, boolean hovered) {
-            action.icon.draw(xPosition + (width - TreeActionIcon.SIZE) / 2,
+            TreeActionIcon.CRAFT.draw(xPosition + (width - TreeActionIcon.SIZE) / 2,
                 yPosition + (height - TreeActionIcon.SIZE) / 2, enabled, hovered);
         }
     }
@@ -182,9 +181,8 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             if (x >= button.xPosition && x < button.xPosition + button.width
                     && y >= button.yPosition && y < button.yPosition + button.height) {
                 tips.add(button.displayString);
-                tips.add(I18n.format("easytouch.craftTree." + button.action.hint));
-                String reason = button.action == Action.DELETE_EXIT ? deletionUnavailableReason(buttonTree)
-                    : unavailableReason(buttonTree, false);
+                tips.add(I18n.format("easytouch.craftTree.craftHint"));
+                String reason = unavailableReason(buttonTree, false);
                 if (reason != null) tips.add(I18n.format("easytouch.craftTree." + reason));
                 break;
             }
@@ -197,13 +195,13 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         if (!isTree(tree)) return "inactive";
         try {
             if (!NEIClientConfig.isLoaded() || !NEIClientConfig.autocraftingEnabled()) return "disabled";
-            if (pending != null || pendingDeletion != null || AutoCraftingManager.processing()) return "busy";
+            if (pending != null || AutoCraftingManager.processing()) return "busy";
             if (Minecraft.getMinecraft().thePlayer.inventory.getItemStack() != null) return "heldItem";
             GuiContainer container = tree.getFirstScreen();
             if (container == null || container == tree || container.inventorySlots == null
                     || container.inventorySlots.inventorySlots.isEmpty()) return "noContainer";
             long now = Minecraft.getSystemTime();
-            // Both buttons share one read-only probe; do not rebuild the recipe chain every frame.
+            // Cache the read-only probe; do not rebuild the recipe chain every frame.
             if (refresh || checkedTree != tree || now - checkedAt >= 250) {
                 BookmarkGrid bookmarks = (BookmarkGrid) grid.get(tree);
                 int selectedGroup = groupId.getInt(tree);
@@ -251,34 +249,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             && mc.thePlayer != null && mc.theWorld != null && !mc.thePlayer.isDead && Display.isActive();
     }
 
-    private String deletionUnavailableReason(GuiCraftingTree tree) {
-        if (failed) return "unavailable";
-        if (!isTree(tree)) return "inactive";
-        try {
-            if (pending != null || pendingDeletion != null || AutoCraftingManager.processing()) return "busy";
-            if (Minecraft.getMinecraft().thePlayer.inventory.getItemStack() != null) return "heldItemExit";
-            BookmarkGrid bookmarks = (BookmarkGrid) grid.get(tree);
-            return bookmarks == null || bookmarks.getGroup(groupId.getInt(tree)) == null ? "noGroup" : null;
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
-            fail(error);
-            return "unavailable";
-        }
-    }
-
-    private void deleteAndExit(GuiCraftingTree tree) {
-        try {
-            String reason = deletionUnavailableReason(tree);
-            if (reason != null) {
-                message(reason);
-                return;
-            }
-            pendingDeletion = new PendingDeletion(tree, (GuiScreen) previousScreen.get(tree),
-                (BookmarkGrid) grid.get(tree), groupId.getInt(tree));
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
-            fail(error);
-        }
-    }
-
     private static boolean mouseReleased() {
         for (int button = 0; button < Mouse.getButtonCount(); button++) {
             if (Mouse.isButtonDown(button)) return false;
@@ -286,57 +256,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         return true;
     }
 
-    private static void removeGroup(BookmarkGrid bookmarks, int groupId, BookmarkGroup expected) {
-        if (bookmarks.getGroup(groupId) != expected) return;
-        bookmarks.removeGroup(groupId);
-        ItemPanels.bookmarkPanel.save();
-    }
-
-    private final class PendingDeletion implements DeferredTreeDeletion.Context {
-        final Minecraft mc = Minecraft.getMinecraft();
-        final GuiCraftingTree tree;
-        final GuiScreen previous;
-        final BookmarkGrid bookmarks;
-        final int selectedGroup;
-        final BookmarkGroup bookmarkGroup;
-        final EntityClientPlayerMP player = mc.thePlayer;
-        final WorldClient world = mc.theWorld;
-        final DeferredTreeDeletion deletion = new DeferredTreeDeletion(this);
-
-        PendingDeletion(GuiCraftingTree tree, GuiScreen previous, BookmarkGrid bookmarks, int selectedGroup) {
-            this.tree = tree;
-            this.previous = previous;
-            this.bookmarks = bookmarks;
-            this.selectedGroup = selectedGroup;
-            this.bookmarkGroup = bookmarks.getGroup(selectedGroup);
-        }
-
-        @Override public boolean sourceCurrent() {
-            return isTree(tree) && mc.thePlayer == player && mc.theWorld == world
-                && bookmarks.getGroup(selectedGroup) == bookmarkGroup;
-        }
-
-        @Override public boolean inputReleased() { return mouseReleased(); }
-
-        @Override public boolean exitTree() {
-            if (player.inventory.getItemStack() != null) {
-                message("heldItemExit");
-                return false;
-            }
-            mc.displayGuiScreen(previous);
-            if (mc.currentScreen != previous || mc.currentScreen == tree
-                    || mc.thePlayer != player || mc.theWorld != world) return false;
-            // Match NEI's Escape action; this path never launches an autocrafting task.
-            NEICPH.sendRequestContainer();
-            return true;
-        }
-
-        @Override public void removeGroup() {
-            NeiCraftingTreeInput.removeGroup(bookmarks, selectedGroup, bookmarkGroup);
-        }
-    }
-
-    private void craft(GuiCraftingTree tree, boolean removeGroup) {
+    private void craft(GuiCraftingTree tree) {
         try {
             String reason = unavailableReason(tree, true);
             if (reason != null) {
@@ -365,7 +285,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
 
             // The button's press/release must finish in the tree. The inventory synchronization
             // reply must also finish before NEI starts moving stacks on its worker thread.
-            pending = new PendingCraft(tree, container, plan, bookmarks, selectedGroup, removeGroup);
+            pending = new PendingCraft(tree, container, plan, bookmarks, selectedGroup);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             fail(error);
         }
@@ -378,16 +298,6 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             buttonTree = null;
             checkedTree = null;
             buttons.clear();
-        }
-        if (pendingDeletion != null) {
-            PendingDeletion request = pendingDeletion;
-            try {
-                request.deletion.tick();
-            } catch (RuntimeException | LinkageError error) {
-                fail(error);
-            } finally {
-                if (request.deletion.done() && pendingDeletion == request) pendingDeletion = null;
-            }
         }
         if (pending == null) return;
         PendingCraft request = pending;
@@ -416,7 +326,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         ContainerSyncBarrier sync;
 
         PendingCraft(GuiCraftingTree tree, GuiContainer target, RecipeChainMath plan,
-                BookmarkGrid bookmarks, int selectedGroup, boolean removeGroup) {
+                BookmarkGrid bookmarks, int selectedGroup) {
             this.tree = tree;
             this.target = target;
             this.inventory = target.inventorySlots;
@@ -425,7 +335,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             this.bookmarks = bookmarks;
             this.selectedGroup = selectedGroup;
             this.bookmarkGroup = bookmarks.getGroup(selectedGroup);
-            this.launch = new DeferredCraftingLaunch(this, 10000, removeGroup);
+            this.launch = new DeferredCraftingLaunch(this, 10000);
         }
 
         private boolean valid() {
@@ -484,20 +394,10 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             }
         }
 
-        @Override public void removeCraftingGroup() {
-            // The plan owns copies of the bookmark items. Remove only the captured tree's group,
-            // even if the user has switched bookmark pages or its numeric ID has since been reused.
-            removeGroup(bookmarks, selectedGroup, bookmarkGroup);
-        }
-
         @Override public void syncTimedOut() { message("syncTimeout"); }
     }
 
     private void cancelPending() {
-        if (pendingDeletion != null) {
-            pendingDeletion.deletion.cancel();
-            pendingDeletion = null;
-        }
         if (pending != null) {
             pending.launch.cancel();
             pending = null;

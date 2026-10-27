@@ -6,8 +6,6 @@ import codechicken.nei.KeyManager;
 import codechicken.nei.LayoutManager;
 import codechicken.nei.NEIClientConfig;
 import codechicken.nei.NEIClientUtils;
-import codechicken.nei.bookmark.BookmarkGrid;
-import codechicken.nei.bookmark.tree.GuiCraftingTree;
 import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.recipe.GuiFavoriteButton;
 import codechicken.nei.recipe.Recipe.RecipeId;
@@ -57,23 +55,10 @@ final class NeiFavoriteTreeShortcut {
         RecipeHandlerRef recipe = RecipeHandlerRef.of(favorite);
         if (recipe == null) return false;
 
-        // Reuse the actual native Shift+T implementation's save operation. It recursively
-        // expands favorites, honors NEI's depth/permutation choices, and adds a TODO crafting group.
         return openRecipe(new GuiFavoriteButton(recipe, 0, 0));
     }
 
     static boolean openRecipe(GuiFavoriteButton favoriteButton) {
-        if (!favoriteButton.saveRecipeInBookmark()) return false;
-        BookmarkGrid bookmarks = ItemPanels.bookmarkPanel.getGrid();
-        int groupId = bookmarks.getNextGroupId() - 1;
-        // NEI otherwise infers the output from dependency depth. With a cycle such as
-        // flint -> mortar -> flint, that can reverse the user's requested recipe.
-        // Its explicit-output (collapsed recipe) marker survives bookmark saves and is
-        // shared by tree rendering, quantity changes and automatic crafting. Root nodes
-        // remain expanded in the tree even when this marker is present.
-        bookmarks.getGroup(groupId).collapsedRecipes.add(favoriteButton.getRecipe().getRecipeId());
-        bookmarks.onItemsChanged();
-        GuiCraftingTree.openCraftingTreeGui(bookmarks, groupId);
-        return true;
+        return TemporaryCraftingTree.open(favoriteButton);
     }
 }
