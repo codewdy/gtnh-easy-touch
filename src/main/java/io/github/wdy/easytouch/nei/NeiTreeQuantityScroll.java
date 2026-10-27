@@ -3,6 +3,8 @@ package io.github.wdy.easytouch.nei;
 import java.awt.geom.Point2D;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import codechicken.nei.NEIClientUtils;
 import codechicken.nei.bookmark.BookmarkGrid;
 import codechicken.nei.bookmark.BookmarkItem;
@@ -46,11 +48,31 @@ final class NeiTreeQuantityScroll {
         return item != null && item.recipeId != null ? item : null;
     }
 
+    List<BookmarkItem> outputs(GuiCraftingTree tree) throws ReflectiveOperationException {
+        List<BookmarkItem> outputs = new ArrayList<>();
+        Object view = canvas.get(tree);
+        if (view == null) return outputs;
+        for (Object node : ((CraftingTreeGraph) graph.get(view)).roots) {
+            BookmarkItem item = (BookmarkItem) ingredient.get(node);
+            if (item != null && item.recipeId != null) outputs.add(item);
+        }
+        return outputs;
+    }
+
     void changeAmount(GuiCraftingTree tree, BookmarkGrid bookmarks, int groupId, BookmarkItem item, int wheel)
             throws ReflectiveOperationException {
         long step = NEIClientUtils.altKey() ? NEIClientUtils.getScrollMultiplier(item.itemStack) : 1;
         bookmarks.shiftRecipeAmount(groupId, item.recipeId, wheel > 0 ? step : -step);
-        // Match native Ctrl+wheel: refresh both the graph and material statistics.
+        rebuild.invoke(tree, new Object[] {null});
+    }
+
+    void changeFixedSteps(GuiCraftingTree tree, BookmarkGrid bookmarks, int groupId, BookmarkItem item, int steps)
+            throws ReflectiveOperationException {
+        // Buttons supply an exact batch count independent of modifier keys.
+        // Repeat native unit steps to avoid snapping to a multiple of that count.
+        for (int i = 0; i < Math.abs(steps); i++) {
+            bookmarks.shiftRecipeAmount(groupId, item.recipeId, steps > 0 ? 1 : -1);
+        }
         rebuild.invoke(tree, new Object[] {null});
     }
 

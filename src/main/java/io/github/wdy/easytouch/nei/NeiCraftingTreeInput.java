@@ -46,6 +46,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     private final Field groupId;
     private final Field searchField;
     private final NeiTreeQuantityScroll quantityScroll;
+    private final NeiTreeQuantityButtons quantityButtons;
     private boolean failed;
     private PendingCraft pending;
     private GuiCraftingTree buttonTree;
@@ -60,6 +61,19 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
         groupId = field("groupId");
         searchField = field("searchField");
         quantityScroll = new NeiTreeQuantityScroll();
+        quantityButtons = new NeiTreeQuantityButtons(quantityScroll, new NeiTreeQuantityButtons.Context() {
+            @Override public boolean active(GuiScreen screen) { return isTree(screen); }
+            @Override public void change(GuiCraftingTree tree, BookmarkItem item, int steps)
+                    throws ReflectiveOperationException {
+                BookmarkGrid bookmarks = (BookmarkGrid) grid.get(tree);
+                int selectedGroup = groupId.getInt(tree);
+                if (bookmarks == null || bookmarks.getGroup(selectedGroup) == null) return;
+                cancelPending();
+                checkedTree = null;
+                quantityScroll.changeFixedSteps(tree, bookmarks, selectedGroup, item, steps);
+            }
+            @Override public void failed(Throwable error) { fail(error); }
+        });
     }
 
     private static Field field(String name) throws ReflectiveOperationException {
@@ -73,7 +87,9 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             NeiCraftingTreeInput input = new NeiCraftingTreeInput();
             GuiContainerManager.addInputHandler(input);
             GuiContainerManager.addTooltipHandler(input);
+            NeiTreeQuantityDisplay.install();
             MinecraftForge.EVENT_BUS.register(input);
+            MinecraftForge.EVENT_BUS.register(input.quantityButtons);
             FMLCommonHandler.instance().bus().register(input);
             // The first touch may arrive while a crafting tree is already open.
             GuiScreen screen = Minecraft.getMinecraft().currentScreen;
@@ -81,6 +97,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
                 List buttons = cpw.mods.fml.relauncher.ReflectionHelper.getPrivateValue(
                     GuiScreen.class, screen, "buttonList", "field_146292_n");
                 input.initGui(new GuiScreenEvent.InitGuiEvent.Post(screen, buttons));
+                input.quantityButtons.init(new GuiScreenEvent.InitGuiEvent.Post(screen, buttons));
             }
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] NEI crafting tree controls unavailable.");
@@ -177,6 +194,10 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     @Override
     public List<String> handleTooltip(GuiContainer gui, int x, int y, List<String> tips) {
         if (gui != buttonTree) return tips;
+        if (quantityButtons.contains(gui, x, y)) {
+            tips.clear();
+            return tips;
+        }
         for (TreeButton button : buttons) {
             if (x >= button.xPosition && x < button.xPosition + button.width
                     && y >= button.yPosition && y < button.yPosition + button.height) {
@@ -294,6 +315,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        quantityButtons.tick(Minecraft.getMinecraft().currentScreen);
         if (Minecraft.getMinecraft().currentScreen != buttonTree) {
             buttonTree = null;
             checkedTree = null;
@@ -405,6 +427,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
     }
 
     private void fail(Throwable error) {
+        quantityButtons.cancel();
         cancelPending();
         if (!failed) {
             failed = true;
@@ -434,15 +457,20 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             return true;
         }
     }
-    @Override public boolean mouseClicked(GuiContainer gui, int x, int y, int button) { return false; }
+    @Override public boolean mouseClicked(GuiContainer gui, int x, int y, int button) {
+        return quantityButtons.click(gui, x, y, button);
+    }
     @Override public void onMouseClicked(GuiContainer gui, int x, int y, int button) {
         // A manual inventory action supersedes a launch that is still waiting for synchronization.
         if (pending != null && gui == pending.target) cancelPending();
     }
-    @Override public void onMouseUp(GuiContainer gui, int x, int y, int button) { }
+    @Override public void onMouseUp(GuiContainer gui, int x, int y, int button) {
+        quantityButtons.release(gui, x, y, button);
+    }
     @Override
     public boolean mouseScrolled(GuiContainer gui, int x, int y, int scroll) {
         if (scroll == 0 || !isTree(gui)) return false;
+        if (quantityButtons.contains(gui, x, y)) return true;
         // Ctrl retains the native path; Shift retains ingredient selection/horizontal scrolling.
         checkedTree = null;
         if (NEIClientUtils.controlKey() || NEIClientUtils.shiftKey()) return false;

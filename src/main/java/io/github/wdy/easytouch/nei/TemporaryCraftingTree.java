@@ -5,14 +5,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import codechicken.nei.BookmarkPanel.BookmarkViewMode;
+import codechicken.nei.ItemStackAmount;
+import codechicken.nei.NEIClientUtils;
 import codechicken.nei.bookmark.BookmarkGrid;
 import codechicken.nei.bookmark.BookmarkGroup;
+import codechicken.nei.bookmark.BookmarkItem;
+import codechicken.nei.bookmark.BookmarkItem.BookmarkItemType;
 import codechicken.nei.bookmark.tree.GuiCraftingTree;
+import codechicken.nei.recipe.AutoCraftingManager;
 import codechicken.nei.recipe.GuiFavoriteButton;
+import codechicken.nei.recipe.StackInfo;
 import codechicken.nei.recipe.Recipe;
 import codechicken.nei.recipe.Recipe.RecipeId;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
 
 /** A native tree backed by private, unsaved data rather than the bookmark panel. */
 final class TemporaryCraftingTree extends GuiCraftingTree {
@@ -41,9 +49,11 @@ final class TemporaryCraftingTree extends GuiCraftingTree {
         for (Recipe recipe : recipes) {
             if (added.add(recipe.getRecipeId())) grid.addRecipe(recipe, 1, groupId);
         }
+        TemporaryCraftingTree tree = new TemporaryCraftingTree(grid, groupId);
+        grid.initializeQuantity(groupId, root, tree.getFirstScreen());
         grid.loading = false;
         grid.onItemsChanged();
-        Minecraft.getMinecraft().displayGuiScreen(new TemporaryCraftingTree(grid, groupId));
+        Minecraft.getMinecraft().displayGuiScreen(tree);
         return true;
     }
 
@@ -61,6 +71,39 @@ final class TemporaryCraftingTree extends GuiCraftingTree {
 
     static final class Grid extends BookmarkGrid {
         private boolean loading = true;
+
+        /** Set the initial target once; later quantity edits and execution keep NEI's normal rules. */
+        private void initializeQuantity(int groupId, Recipe root, GuiContainer source) {
+            if (source == null || source.inventorySlots == null) return;
+            ItemStack output = root.getResult();
+            if (output == null) return;
+            BookmarkItem result = null;
+            for (BookmarkItem item : bookmarkItems) {
+                if (item.equalsRecipe(root.getRecipeId(), groupId) && item.type == BookmarkItemType.RESULT
+                        && !item.emptyFactor()
+                        && NEIClientUtils.areStacksSameTypeCraftingWithNBT(item.itemStack, output)) {
+                    result = item;
+                    break;
+                }
+            }
+            if (result == null) return;
+            ItemStackAmount inventory = AutoCraftingManager.getInventoryItems(source);
+            long owned = 0;
+            for (ItemStack stack : inventory.values()) {
+                if (NEIClientUtils.areStacksSameTypeCraftingWithNBT(stack, result.itemStack)) {
+                    owned += StackInfo.getAmount(stack);
+                }
+            }
+            final BookmarkItem target = result;
+            // Use NEI's own output rounding, including chance and fluid/container units.
+            long multiplier = InitialCraftingQuantity.above(owned,
+                batches -> target.getStackSize(target.getAmount(batches)));
+            for (BookmarkItem item : bookmarkItems) {
+                if (item.equalsRecipe(root.getRecipeId(), groupId) && !item.emptyFactor()) {
+                    item.multiplier = multiplier;
+                }
+            }
+        }
 
         @Override
         public void onItemsChanged() {

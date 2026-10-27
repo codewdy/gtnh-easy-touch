@@ -38,3 +38,5 @@ easytouch.neiMenu.7=Back
 
 easytouch.craftTree.buttonCraft=Craft
 easytouch.craftTree.craftHint=Craft using this tree without adding or deleting bookmarks.
+easytouch.craftTree.quantity=Owned %s + missing %s; target %s
+easytouch.craftTree.quantityHint=The label shows inventory and target shortfall; original crafting batch rules still apply.
