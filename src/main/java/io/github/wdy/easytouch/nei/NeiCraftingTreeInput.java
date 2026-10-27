@@ -93,6 +93,13 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             GuiContainerManager.addTooltipHandler(input);
             MinecraftForge.EVENT_BUS.register(input);
             FMLCommonHandler.instance().bus().register(input);
+            // The first touch may arrive while a crafting tree is already open.
+            GuiScreen screen = Minecraft.getMinecraft().currentScreen;
+            if (screen instanceof GuiCraftingTree) {
+                List buttons = cpw.mods.fml.relauncher.ReflectionHelper.getPrivateValue(
+                    GuiScreen.class, screen, "buttonList", "field_146292_n");
+                input.initGui(new GuiScreenEvent.InitGuiEvent.Post(screen, buttons));
+            }
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] NEI crafting tree controls unavailable.");
         }

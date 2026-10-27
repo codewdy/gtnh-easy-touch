@@ -15,6 +15,7 @@ import static org.lwjgl.sdl.SDLTouch.SDL_TOUCH_MOUSEID;
 @Lwjgl3Aware
 public final class SdlTouchMouseFilter implements AutoCloseable {
     private final IntSupplier window;
+    private final java.util.function.BooleanSupplier enabled;
     private final SDL_EventFilter previous;
     private final long previousData;
     private final SDL_EventFilter callback;
@@ -22,8 +23,9 @@ public final class SdlTouchMouseFilter implements AutoCloseable {
     private volatile boolean closed;
     private volatile Throwable failure;
 
-    public SdlTouchMouseFilter(IntSupplier window) {
+    public SdlTouchMouseFilter(IntSupplier window, java.util.function.BooleanSupplier enabled) {
         this.window = window;
+        this.enabled = enabled;
         try (MemoryStack stack = MemoryStack.stackPush()) {
             PointerBuffer filter = stack.callocPointer(1), data = stack.callocPointer(1);
             SDL_GetEventFilter(filter, data);
@@ -59,13 +61,13 @@ public final class SdlTouchMouseFilter implements AutoCloseable {
         if (type == SDL_EVENT_WINDOW_FOCUS_LOST && ourWindow(event.window().windowID())) {
             physicalButtons.clear();
         } else if (type == SDL_EVENT_MOUSE_MOTION && ourWindow(event.motion().windowID())) {
-            if (event.motion().which() == SDL_TOUCH_MOUSEID) return false;
+            if (event.motion().which() == SDL_TOUCH_MOUSEID) return !enabled.getAsBoolean();
         } else if ((type == SDL_EVENT_MOUSE_BUTTON_DOWN || type == SDL_EVENT_MOUSE_BUTTON_UP)
                 && ourWindow(event.button().windowID())) {
             int device = event.button().which();
             int button = event.button().button() & 0xff;
             boolean down = type == SDL_EVENT_MOUSE_BUTTON_DOWN;
-            if (device == SDL_TOUCH_MOUSEID) return false;
+            if (device == SDL_TOUCH_MOUSEID) return !enabled.getAsBoolean();
             if (button >= 1 && button <= 32) {
                 int mask = 1 << (button - 1);
                 int state = physicalButtons.containsKey(device) ? physicalButtons.get(device) : 0;
@@ -73,7 +75,7 @@ public final class SdlTouchMouseFilter implements AutoCloseable {
             }
         }
         if (type == SDL_EVENT_MOUSE_WHEEL && ourWindow(event.wheel().windowID())
-                && event.wheel().which() == SDL_TOUCH_MOUSEID) return false;
+                && event.wheel().which() == SDL_TOUCH_MOUSEID) return !enabled.getAsBoolean();
         return true;
     }
 

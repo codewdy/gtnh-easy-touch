@@ -16,14 +16,12 @@ public final class EasyTouch {
     public void preInit(FMLPreInitializationEvent event) {
         if (event.getSide().isClient()) {
             config = new TouchConfig(event.getSuggestedConfigurationFile());
-            ClientInput.install(config);
         }
     }
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         if (event.getSide().isClient()) {
-            ClientInput.installNeiCrafting();
             TouchInput.install(config);
         }
     }

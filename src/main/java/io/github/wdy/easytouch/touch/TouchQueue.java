@@ -9,6 +9,7 @@ public final class TouchQueue {
     private final List<TouchSample> pending = new ArrayList<TouchSample>();
     private boolean focused = true;
     private long dropped;
+    private volatile boolean nativeTouchSeen;
 
     public TouchQueue(int capacity) {
         if (capacity < 2) throw new IllegalArgumentException("capacity < 2");
@@ -17,6 +18,7 @@ public final class TouchQueue {
 
     public synchronized void offer(TouchSample sample) {
         if (!focused || !sample.valid()) return;
+        if (sample.kind != TouchSample.Kind.RESET && !sample.simulated()) nativeTouchSeen = true;
         if (pending.size() >= capacity) {
             dropped += pending.size();
             pending.clear();
@@ -42,6 +44,9 @@ public final class TouchQueue {
         pending.clear();
         return result;
     }
+
+    /** Session latch: focus changes and queue resets must not disable touch again. */
+    public boolean nativeTouchSeen() { return nativeTouchSeen; }
 
     public synchronized long dropped() { return dropped; }
 }

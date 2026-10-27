@@ -5,6 +5,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import io.github.wdy.easytouch.TouchConfig;
+import io.github.wdy.easytouch.ClientInput;
 import io.github.wdy.easytouch.input.TouchMouse;
 import static org.lwjgl.sdl.SDLMouse.SDL_BUTTON_LMASK;
 import me.eigenraven.lwjgl3ify.api.Lwjgl3Aware;
@@ -42,10 +43,13 @@ public final class TouchInput {
     SdlTouchSource source;
     String status;
     private final boolean logEvents;
+    private final TouchConfig config;
+    private boolean active;
     private boolean openRequested;
     private final TouchMouse guiMouse = new TouchMouse(new GuiTouchMouse(mc));
 
     private TouchInput(TouchConfig config) {
+        this.config = config;
         logEvents = config.touchLogEvents;
         try {
             if (SDL_WasInit(SDL_INIT_EVENTS) == 0 || Display.sdlWindowId == 0) {
@@ -56,7 +60,7 @@ public final class TouchInput {
                 return;
             }
             source = new SdlTouchSource(queue, () -> Display.sdlWindowId);
-            mouseFilter = new SdlTouchMouseFilter(() -> Display.sdlWindowId);
+            mouseFilter = new SdlTouchMouseFilter(() -> Display.sdlWindowId, queue::nativeTouchSeen);
             status = "ready";
             LOG.info("[Touch] SDL3 event watch ready; {}. Open /easytouch touch to inspect contacts.",
                 source.enabledTypes);
@@ -77,6 +81,10 @@ public final class TouchInput {
             @Override public int getRequiredPermissionLevel() { return 0; }
             @Override public boolean canCommandSenderUseCommand(ICommandSender sender) { return true; }
             @Override public void processCommand(ICommandSender sender, String[] args) {
+                if (!input.active) {
+                    sender.addChatMessage(new net.minecraft.util.ChatComponentText("Easy Touch: 等待首次原生触摸输入后启用。"));
+                    return;
+                }
                 if (args.length == 1 && "layout".equalsIgnoreCase(args[0])) {
                     io.github.wdy.easytouch.layout.TouchButtons.instance.openRequested = true;
                     return;
@@ -108,12 +116,12 @@ public final class TouchInput {
 
     public static boolean mouseButtonDown(int button) {
         TouchInput input = installed;
-        return input != null && input.mouseFilter != null && "ready".equals(input.status)
+        return input != null && input.active && input.mouseFilter != null && "ready".equals(input.status)
             ? input.mouseFilter.physicalButtonDown(button) : Mouse.isButtonDown(button);
     }
 
     private void syncMouseButtons() {
-        if (mouseFilter != null && "ready".equals(status)) {
+        if (active && mouseFilter != null && "ready".equals(status)) {
             // SDL's aggregate includes the synthetic mouse we filtered. Publish only real buttons + our GUI owner.
             Mouse.sdlMouseButtonFlags = mouseFilter.physicalButtons() | (guiMouse.held() ? SDL_BUTTON_LMASK : 0)
                 | io.github.wdy.easytouch.layout.TouchButtons.instance.mouseFlags();
@@ -122,6 +130,7 @@ public final class TouchInput {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void render(TickEvent.RenderTickEvent event) {
+        if (!active) return;
         if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
         // Display.update overwrites SDL button flags even on frames without a client tick.
         // Restore our owners before Mouse Tweaks (NORMAL priority) samples right-button state.
@@ -151,6 +160,7 @@ public final class TouchInput {
             catch (RuntimeException | LinkageError error) { LOG.warn("[Touch] Cannot unregister event watch.", error); }
         }
         dispatchPending();
+        if (!active) return;
         io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
         if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
         syncMouseButtons();
@@ -161,8 +171,17 @@ public final class TouchInput {
     }
 
     private void dispatchPending() {
-        for (TouchSample sample : queue.drain()) {
+        java.util.List<TouchSample> pending = queue.drain();
+        if (!active && queue.nativeTouchSeen() && "ready".equals(status)) {
+            // Install every gameplay/UI hook only on the client thread, before forwarding the first touch.
+            ClientInput.install(config);
+            ClientInput.installNeiCrafting();
+            active = true;
+            LOG.info("[Touch] First native touch detected; Easy Touch enabled for this session.");
+        }
+        for (TouchSample sample : pending) {
             tracker.accept(sample);
+            if (!active) continue;
             TouchInputEvent forwarded = new TouchInputEvent(sample);
             forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
             if (guiInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)) {
