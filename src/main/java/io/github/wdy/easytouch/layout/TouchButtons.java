@@ -70,7 +70,8 @@ public final class TouchButtons {
             if (item == 1) config.toggle();
             else if (item == 2) config.toggleButtons();
             else if (item == 3 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
-            else if (item == 4) {
+            else if (item == 4) config.toggleAutoStep();
+            else if (item == GlobalTouchMenu.TOUCHPAD) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
             }
@@ -189,7 +190,8 @@ public final class TouchButtons {
     private String[] menuLabels() {
         return new String[]{"Smart: " + (config.enabled ? "开启" : "关闭"),
             config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
-            mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射"};
+            mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射",
+            "自动上台阶：" + (config.autoStep ? "开启" : "关闭")};
     }
     private int textWidth(String label) { return (int)Math.ceil(mc.fontRenderer.getStringWidth(label)*.8f); }
     private int fittedMenuWidth(int textWidth, int screenWidth) {

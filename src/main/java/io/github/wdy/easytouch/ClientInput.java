@@ -1,6 +1,7 @@
 package io.github.wdy.easytouch;
 
 import io.github.wdy.easytouch.input.KeyStateMerger;
+import io.github.wdy.easytouch.input.AutoStep;
 import io.github.wdy.easytouch.input.MinecraftInput;
 import io.github.wdy.easytouch.input.SmartTouchInput;
 import io.github.wdy.easytouch.input.TouchLook;
@@ -32,6 +33,7 @@ public final class ClientInput {
     private final KeyStateMerger keys = new KeyStateMerger(input);
     private final TouchHotbar hotbar = new TouchHotbar(slot -> input.mc.thePlayer.inventory.currentItem = slot);
     private final TouchMovement movement = new TouchMovement(keys.newSource());
+    private final AutoStep autoStep = new AutoStep();
     private final TouchConfig config;
     private final SmartTouchInput smartTouch;
     private final TouchLook touchLook;
@@ -76,6 +78,7 @@ public final class ClientInput {
     }
 
     private void cancelInputs() {
+        autoStep.restore();
         touchLook.cancel();
         movement.cancel();
         hotbar.cancel();
@@ -135,6 +138,23 @@ public final class ClientInput {
             touchLook.tick(TouchInput.nanoTime());
         }
         keys.sync(input.inWorld());
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void playerTick(TickEvent.PlayerTickEvent event) {
+        // Integrated-server and remote players must keep their own movement rules.
+        if (event.player != input.mc.thePlayer) return;
+        if (event.phase == TickEvent.Phase.END) {
+            autoStep.restore();
+        } else {
+            autoStep.begin(input.mc.thePlayer, config.autoStep && input.inWorld()
+                && !input.mc.gameSettings.keyBindSneak.getIsKeyPressed()
+                && (input.mc.thePlayer.isInWater() || !input.mc.gameSettings.keyBindJump.getIsKeyPressed()),
+                (input.mc.gameSettings.keyBindForward.getIsKeyPressed() ? 1 : 0)
+                    - (input.mc.gameSettings.keyBindBack.getIsKeyPressed() ? 1 : 0),
+                (input.mc.gameSettings.keyBindLeft.getIsKeyPressed() ? 1 : 0)
+                    - (input.mc.gameSettings.keyBindRight.getIsKeyPressed() ? 1 : 0));
+        }
     }
 
     @SubscribeEvent

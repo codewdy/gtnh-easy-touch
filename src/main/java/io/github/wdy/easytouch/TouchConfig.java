@@ -11,6 +11,7 @@ public final class TouchConfig {
     public final File layoutFile;
     public boolean enabled;
     public boolean buttonsVisible;
+    public boolean autoStep;
     public final boolean hud;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
@@ -24,6 +25,8 @@ public final class TouchConfig {
         file.load();
         enabled = file.getBoolean("enabled", "general", true, "Enable smart target actions for native touch clicks and holds. Physical mouse buttons are unchanged.");
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
+        autoStep = file.getBoolean("autoStep", "movement", false,
+            "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");
         hud = file.getBoolean("showHud", "general", true, "Show Interact near the crosshair when aiming at a whitelisted target.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
@@ -53,6 +56,12 @@ public final class TouchConfig {
     public void toggleButtons() {
         buttonsVisible = !buttonsVisible;
         file.get("touch", "showButtons", true).set(buttonsVisible);
+        file.save();
+    }
+
+    public void toggleAutoStep() {
+        autoStep = !autoStep;
+        file.get("movement", "autoStep", false).set(autoStep);
         file.save();
     }
 
