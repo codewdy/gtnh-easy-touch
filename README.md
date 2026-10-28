@@ -1,5 +1,17 @@
 # GTNH Easy Touch
 
+**0.4.76 改用游戏内输入框的 Windows UI Automation（UIA）接口，移除上方系统编辑弹窗。焦点、可编辑状态、文本和实际位置直接来自 MC 输入框；隐藏的 Win32 光标向 Sunshine 提供游戏内光标位置。输入、选区、点击、Enter/Esc 均由游戏自身处理。**
+
+Windows 10/11 x64 默认启用 `text.nativeTextInput=true`，不需要先触发原生触摸。支持原版 `GuiTextField`、NEI 可见文本框和 ModularUI 1/2 的单行 `TextFieldWidget`。告示牌、书本、多行控件和其他自绘文本编辑器暂未接入。关闭这项配置并重启可恢复普通 MC 输入。
+
+UIA provider 挂在现有 SDL 游戏窗口上，全屏期间保持游戏窗口和焦点，不再临时切换显示模式或修改暂停设置。接口通过标准 [Windows UIA provider](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-serversideprovider) 实现；小型 Windows x64 DLL 从本项目 C++ 源码编译后内嵌于 jar，首次运行按 SHA-256 解包到系统临时目录缓存，不需安装外部服务。输入仍经过 lwjgl3ify/SDL 和原控件的校验；UIA ValuePattern 写入排队到游戏线程执行，过期焦点的写入会被丢弃。
+
+已核对 Foundation Sunshine `v2026.1020.23431.杂鱼`、面板 `v0.6.5` 和 Moonlight V+ `v12.14.0`。自动弹键盘要求近期远程点击与输入框位置匹配；现在上报实际 MC 输入框位置。只用快捷键打开聊天且没有近期远程点击，仍不能保证弹出键盘。下方输入框被键盘遮住时，Moonlight 仍可能按真实光标位置上移游戏画面；这版没有关闭客户端避让。
+
+Sunshine 该稳定版的 UIA 收键盘仍要求新的远程点击，仅按 Enter/Esc 离开输入框可能不会自动收起。这是 [Sunshine 的关联条件](https://github.com/AlkaidLab/foundation-sunshine/blob/66d27405e43ba1cc5e8c88dda88ba44f06ac56b8/src/text_context/bridge.cpp)，模组会正常上报焦点结束，但不伪造远程点击。客户端自动输入法行为见 [Moonlight V+ 实现](https://github.com/qiin2333/moonlight-vplus/blob/v12.14.0/app/src/main/java/com/limelight/utils/RemoteImeController.kt)。
+
+建议在全屏串流下依次测试：点击 NEI 搜索框、输入中文并移动光标、点击能移除焦点的位置、切换界面、再测试 ModularUI 数字框。再单独比较点击离开和 Enter/Esc 离开的收键盘行为。日志中的 `[UIA text] bridge installed / focused / released` 可确认桥接状态，不记录输入文字。当前构建环境不能运行 Windows 串流会话，实际自动弹出、收起及中文输入效果仍需主机实测。
+
 **0.4.72 数量按钮固定为 `+64 / +1 / -1 / -64`，按物品数调整目标；临时树默认目标为已有数量 + 1，实际按缺口取整到完整配方批次。**
 
 **0.4.70 数量按钮缩小为单列，从上到下为大加、小加、小减、大减；移除数量控件的悬停提示。**
@@ -46,7 +58,7 @@
 
 ## 安装与使用
 
-1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.39.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.76.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 在串流软件中开启原生触点透传；模组不依赖串流软件额外模拟鼠标点击。真实鼠标或串流按键发送的左右键保持原版行为。
 3. 点击右下角全局菜单切换 smart、显示/隐藏触屏按键或配置映射。本模组不再向游戏控制菜单注册快捷键。
 
@@ -389,6 +401,6 @@ stateDiagram-v2
 
 ## 构建
 
-使用 Java 25 执行 `./gradlew build`（Windows：`gradlew.bat build`）。Gradle 自动获取编译所需的 Java 8；产物使用 Java 8 字节码，但运行环境仍需满足 lwjgl3ify 和 SDL3 的要求，请使用 GTNH 现代 Java 版。
+使用 Java 25 和 MinGW-w64 的 x86_64 C++ 编译器执行 `./gradlew build`（Windows：`gradlew.bat build`）。默认调用 `x86_64-w64-mingw32-g++`，可通过环境变量 `MINGW_CXX` 指定编译器完整路径；需要 MinGW-w64 的 UIAutomation 头文件。`buildWindowsUia` 自动编译并打包 DLL，`sourcesJar` 包含对应 C++ 源码。Gradle 自动获取编译所需的 Java 8；产物使用 Java 8 字节码，但运行环境仍需满足 lwjgl3ify 和 SDL3 的要求，请使用 GTNH 现代 Java 版。
 
 项目不保留常驻测试代码、测试依赖或 SDL 专用测试任务。允许按需进行针对性测试，测试代码和脚本使用临时目录（如 `/tmp`），不归档到项目测试目录，避免积累大量回归测试。正常构建负责编译与打包，游戏操作效果按需在客户端确认。

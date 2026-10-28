@@ -15,6 +15,7 @@ public final class TouchConfig {
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
     public final float touchDragSensitivity;
+    public final boolean nativeTextInput;
     public final MatcherRegistry matchers;
 
     public TouchConfig(File path) {
@@ -28,6 +29,9 @@ public final class TouchConfig {
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
         touchLogEvents = file.getBoolean("logEvents", "touch", false,
             "Log touch down/up/cancel/reset events for diagnostics. Motion events are not logged.");
+        nativeTextInput = file.getBoolean("nativeTextInput", "text", true,
+            "On Windows x64, expose focused Minecraft text fields and their actual bounds through UI Automation for streaming IME detection. "
+                + "Works independently of touch input. Supports vanilla, NEI and ModularUI 1/2 single-line fields. Restart to apply.");
         Property dragSensitivity = file.get("touch", "dragSensitivity", 1.0,
             "Touch camera drag sensitivity multiplier (0.1 to 5.0). 1.0 keeps the default speed; "
                 + "0.5 halves it; 2.0 doubles it. Multiplies Minecraft mouse sensitivity. "
