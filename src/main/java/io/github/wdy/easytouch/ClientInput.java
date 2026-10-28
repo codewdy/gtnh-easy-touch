@@ -50,6 +50,8 @@ public final class ClientInput {
                 input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
             }
             public void click() { actions.click(); }
+            public void secondaryClick() { touchKeys.click(smartTouch.touchSecondary() == Action.ATTACK
+                ? KeyStateMerger.Key.ATTACK : KeyStateMerger.Key.USE); }
             public void press() { actions.press(); }
             public void release() { actions.release(); }
         });

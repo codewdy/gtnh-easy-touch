@@ -31,7 +31,7 @@ public final class GuiTouchMouse implements TouchMouse.Port {
     }
 
     @Override public void button(boolean down) {
-        if (down) heldButton = config != null && config.secondaryTap ? 1 : 0;
+        if (down) heldButton = 0;
         if (down || !TouchInput.mouseButtonDown(heldButton)
                 && !io.github.wdy.easytouch.layout.TouchButtons.instance.mouseHeld(heldButton))
             Mouse.addButtonEvent(heldButton, down);

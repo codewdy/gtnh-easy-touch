@@ -19,7 +19,6 @@ public final class GlobalTouchMenu {
     public GlobalTouchMenu(Runnable opened, IntConsumer action) { this.opened = opened; this.action = action; }
     public void touchpadAvailable(boolean value) { touchpadAvailable=value; }
     public int touchpadLeft(int width) { return left(width)-SIZE-4; }
-    public int secondaryLeft(int width) { return touchpadLeft(width)-SIZE-4; }
     public boolean isOpen() { return open; }
     public int left(int width) { return width - MARGIN - SIZE; }
     public int top(int height) { return height - MARGIN - SIZE; }
@@ -28,7 +27,6 @@ public final class GlobalTouchMenu {
     public int hit(int x, int y, int width, int height) {
         if (Circle.hit(x,y,left(width),top(height),SIZE)) return 0;
         if (touchpadAvailable && Circle.hit(x,y,touchpadLeft(width),top(height),SIZE)) return 4;
-        if (touchpadAvailable && Circle.hit(x,y,secondaryLeft(width),top(height),SIZE)) return 5;
         if (open) for (int row=0; row<3; row++)
             if (x >= panelLeft(width) && x < width-MARGIN
                     && y >= panelTop(height)+row*ROW && y < panelTop(height)+(row+1)*ROW) return row+1;
@@ -46,7 +44,7 @@ public final class GlobalTouchMenu {
                 contacts.remove(id);
                 if (sample.kind == TouchSample.Kind.UP && captured == hit) {
                     if (hit == 0) { open = !open; if (open) opened.run(); }
-                    else if (hit == 4 || hit == 5) { open = false; action.accept(hit); }
+                    else if (hit == 4) { open = false; action.accept(hit); }
                     else if (hit > 0 && open) { open = false; action.accept(hit); }
                 }
             }

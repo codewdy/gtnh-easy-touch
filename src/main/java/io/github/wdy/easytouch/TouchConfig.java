@@ -11,7 +11,6 @@ public final class TouchConfig {
     public final File layoutFile;
     public boolean enabled;
     public boolean buttonsVisible;
-    public boolean secondaryTap;
     public final boolean hud;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
@@ -24,7 +23,6 @@ public final class TouchConfig {
         file.load();
         enabled = file.getBoolean("enabled", "general", true, "Enable smart target actions for native touch clicks and holds. Physical mouse buttons are unchanged.");
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
-        secondaryTap = file.getBoolean("secondaryTap", "touch", false, "Use right click in GUIs and the Smart secondary action for world taps.");
         hud = file.getBoolean("showHud", "general", true, "Show Interact near the crosshair when aiming at a whitelisted target.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
@@ -45,12 +43,6 @@ public final class TouchConfig {
             file.addCustomCategoryComment("rules", "Legacy 0.1.0 rules are ignored. Edit matchers.* instead."
                 + " Held items no longer cause swapping. Entries are preserved here for reference only.");
         }
-        file.save();
-    }
-
-    public void toggleSecondaryTap() {
-        secondaryTap = !secondaryTap;
-        file.get("touch", "secondaryTap", false).set(secondaryTap);
         file.save();
     }
 

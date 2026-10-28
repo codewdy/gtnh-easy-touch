@@ -28,7 +28,7 @@ public final class SmartTouchInput {
     }
 
     public Action touchTap() {
-        return config.secondaryTap ? touchSecondary() : touchPrimary();
+        return touchPrimary();
     }
 
     /** Sneaking or disabled smart makes primary ATTACK, so secondary is always USE. */
