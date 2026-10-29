@@ -1,5 +1,15 @@
 # GTNH Easy Touch
 
+**0.4.88：修复搜索栏长按监听类非 public 导致切换界面时 IllegalAccessError；同步模组声明版本号。**
+
+**0.4.87：NEI 搜索栏静止长按 250ms 切换背包物品搜索高亮，与 NEI 原生双击使用同一状态；再次长按关闭，不修改搜索文字。短按及拖动沿用现有输入，切换界面或失焦取消长按。**
+
+**0.4.86：背包与容器物品长按菜单新增“收集”，相当于原生左键双击：拿起选中物品，并将可合并的同类物品收集到光标，最多达到一组上限。不可堆叠、不可取出或容器禁止收集时置灰；NEI 展示物品不提供该选项。**
+
+**0.4.85：双击间隔统一调整为 250ms。**
+
+**0.4.84：统一单击左键、双击右键与单指拖动；持剑对实体立即攻击（含匠魂五种剑）；删除 Smart 与双指鼠标手势，保留物品长按菜单。旧版本记录描述的是当时行为，当前操作以下方安装与使用说明为准。**
+
 **0.4.82 世界内对准方块或机器按 U 打开 NEI 用途，沿用 NEI 原生物品用途查询。可在控制设置中修改“查看准星方块的 NEI 用途”按键，或绑定到触控按钮；没有方块目标时不执行查询。**
 
 **0.4.80 自动上台阶按移动方向和惯性检测前方实际碰撞面，使用碰撞面顶端到脚底的高度差作为本次跨步高度，上限仍为 1.25 格。检查上升路径、抬高后的水平移动和落脚支撑；顶头或目标空间不足时保留原跨步高度。实际移动仍由原版碰撞处理。**
@@ -8,7 +18,7 @@
 
 **0.4.78 自动上台阶支持水中上岸，沿用右下角开关及已保存的选择。陆地最多跨一格，水中使用 StepUp 的 1.25 格高度，并允许按住跳跃键向上游；是否跨步仍由原版的着地与碰撞条件决定，不强制着地或额外施加上浮速度。两种状态都检查完整上升空间，头顶不足时保留原有跨步高度；潜行、骑乘、飞行和岩浆中不启用辅助。**
 
-**0.4.77 新增自动上台阶：在右下角菜单切换“自动上台阶：开启/关闭”，默认关闭，选择后立即保存。支持触屏轮盘和键盘移动；站在地面且头顶空间足够时自动跨上最多一格高的障碍，潜行、主动跳跃、飞行、骑乘和游泳时不启用。跨步前检查完整上升空间，避免低顶下陷；每次移动更新后恢复原有跨步高度。可替代 StepUp，请勿同时安装。**
+**0.4.77 新增自动上台阶：在右下角菜单切换“自动上台阶：开启/关闭”，默认关闭，选择后立即保存。支持触屏摇杆和键盘移动；站在地面且头顶空间足够时自动跨上最多一格高的障碍，潜行、主动跳跃、飞行、骑乘和游泳时不启用。跨步前检查完整上升空间，避免低顶下陷；每次移动更新后恢复原有跨步高度。可替代 StepUp，请勿同时安装。**
 
 **0.4.76 改用游戏内输入框的 Windows UI Automation（UIA）接口，移除上方系统编辑弹窗。焦点、可编辑状态、文本和实际位置直接来自 MC 输入框；隐藏的 Win32 光标向 Sunshine 提供游戏内光标位置。输入、选区、点击、Enter/Esc 均由游戏自身处理。**
 
@@ -68,47 +78,46 @@ Sunshine 该稳定版的 UIA 收键盘仍要求新的远程点击，仅按 Enter
 
 ## 安装与使用
 
-1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.80.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
+1. 使用 GTNH 2.9.0 RC2 现代 Java 版（自带 lwjgl3ify 3.0.37 和 SDL3），将 `build/libs/gtnh-easy-touch-0.4.88.jar` 放入客户端的 `mods/`，并移除旧版 Easy Touch jar。不要安装 `-sources.jar` 或 `-dev.jar`。
 2. 在串流软件中开启原生触点透传；模组不依赖串流软件额外模拟鼠标点击。真实鼠标或串流按键发送的左右键保持原版行为。
-3. 点击右下角全局菜单切换 smart、自动上台阶、显示/隐藏触屏按键或配置映射。本模组不再向游戏控制菜单注册快捷键。
+3. 点击右下角全局菜单切换自动上台阶、显示/隐藏触屏按键或配置映射。本模组不再向游戏控制菜单注册快捷键。
 
-触摸 smart 默认开启。切换状态保存到 `config/gtnheasytouch.cfg`；关闭后世界内触摸点击与长按执行攻击/挖掘，拖拽仍控制视角。开启时，命中白名单目标的轻触执行使用/交互；长按始终执行攻击/挖掘。普通 GUI 触摸默认模拟鼠标左键；右下角“主／副”按钮可切换为右键，世界内轻触则改用 Smart 副键。选择会保存；世界内长按始终持续左键攻击/挖掘，不受主／副选择、Smart 或准星目标影响，松手释放；NEI 专用触摸菜单和触摸板手势保持原有规则。攻击/使用改绑后仍通过对应的游戏按键执行触摸动作。
+世界右半屏与普通 UI 统一单击左键、双击右键：第一次抬手后等待 250ms，在同一位置再次点击则只发右键。单次按住 250ms 为左键保持，双击第二次按住为右键保持，移动可拖动，松手释放。世界内快速滑动仅转视角，左半屏自由摇杆继续控制移动。
 
-世界模式左下方显示 WASD 轮盘：按住方向持续移动，斜向支持两个方向同时移动，滑回中心停步，松手停止。左手移动时可用另一根手指拖动视角。轮盘沿用游戏前后左右按键绑定，不受 smart 开关影响；打开 GUI、失焦或隐藏 HUD 时释放移动。需要原生触点透传。
+持原版剑、继承 ItemSword 的剑或匠魂 Broadsword、Longsword、Rapier、Cleaver、Cutlass，且准星命中生物或可攻击实体时，落指立即攻击，连续点击连续攻击，不等待或识别双击。此例外不应用于 UI。
 
-玩家处于潜行状态（默认按住 Shift）时，新触摸动作执行攻击/挖掘，即使目标在白名单中也不转为交互；准星旁的“交互”提示同时隐藏。依据 `player.isSneaking()` 判断。世界内长按始终保持攻击/挖掘，不受 smart 或潜行状态影响。
+背包物品、NEI 列表、书签与配方物品保留静止长按菜单；菜单出现前移动会进入左键拖动。轻点和双击走统一左右键逻辑；双击第二次按住可右键拖动，不弹长按菜单。菜单已经打开时，当前手势归菜单处理。
+
+旧 Smart 匹配、开关、准星提示和双指鼠标手势均已删除；旧 matcher 配置不再读取。真实鼠标行为不变。
 
 ## 自定义触屏按键
 
 点击游戏右下角的小菜单按钮，向上展开全局控制菜单；世界、背包、机器和其他 GUI 中都可使用：
 
-- **Smart: 开启/关闭**：直接切换 smart 模式，立即保存。
-- **隐藏/显示所有按键**：统一控制自定义触屏按键和 WASD 轮盘，右下角菜单按钮自身始终保留。隐藏时释放正在按住的输入；重新显示遵循各按键原有的世界/其他规则，不改写布局。开关保存在 `config/gtnheasytouch.cfg` 的 `touch.showButtons`，重启后保留。
+- **隐藏/显示所有按键**：统一控制自定义触屏按键和摇杆指示器，右下角菜单按钮自身始终保留。隐藏时释放正在按住的输入；重新显示遵循各按键原有的世界/其他规则，不改写布局。开关保存在 `config/gtnheasytouch.cfg` 的 `touch.showButtons`，重启后保留。
 - **配置按键映射**：进入布局编辑器。原暂停菜单入口和“编辑触屏按键布局”快捷键已移除，仍可用 `/easytouch layout` 直接打开。
-- **自动上台阶：开启/关闭**：默认关闭，开启后陆地和水中均最多跨 1.25 格，水中可辅助上岸，支持按住跳跃键向上游；仍需满足原版的着地或本次下落碰到地面的跨步条件。潜行时暂停。开关保存于 `config/gtnheasytouch.cfg` 的 `movement.autoStep`，重启后保留，独立于 Smart 和触屏按键显示开关。按移动方向和惯性检测前方碰撞面的实际高度差，动态设置本次跨步高度；上升路径或落脚空间不足时保留原有行走方式。
+- **自动上台阶：开启/关闭**：默认关闭，开启后陆地和水中均最多跨 1.25 格，水中可辅助上岸，支持按住跳跃键向上游；仍需满足原版的着地或本次下落碰到地面的跨步条件。潜行时暂停。开关保存于 `config/gtnheasytouch.cfg` 的 `movement.autoStep`，重启后保留，独立于触屏按键显示开关。按移动方向和惯性检测前方碰撞面的实际高度差，动态设置本次跨步高度；上升路径或落脚空间不足时保留原有行走方式。
 
 菜单项在手指抬起时执行；点击外部收起菜单，该次触摸不会穿透到游戏或 GUI。菜单打开时释放当前触摸操作。布局编辑器只负责布局与单个按键属性；即使全局隐藏按键，也可在编辑器中预览和修改。
 
 - 点“新增”后打开映射，使用虚拟键盘点选一个或多个键，再点“确定”文字按钮。已选键高亮，再点一次取消；“清空”重选，“数字/导航”切换数字小键盘与导航键页。支持 Shift+T、Ctrl+R 等组合键，也支持多个普通键；选择只在确认后生效；主键盘及数字/导航页末尾的“左 / 右 / 中”对应鼠标左、右、中键，可与键盘键组合，例如 Shift+鼠标左键。清空后也可以确认保存空映射。
-- **Smart 副键**：首次使用或升级旧布局时补上一个“副”按钮，也可在虚拟键盘右上角点“副”选择该动作。它是独立动作，不能与普通键组合，默认只在世界显示；可移动、修改外观、切换按住/切换模式或删除。保存删除后不会自动补回。
-- 副键按下时与当前 smart 主动作相反：主动作交互时执行攻击，主动作攻击时执行使用。按住 Shift、潜行或 smart 关闭时执行使用/右键。沿用游戏攻击/使用绑定；按住或切换保持期间锁定动作，目标变化不会中途换键，重新激活时才重新判断。GUI 中不显示副键。
 - 新映射保存具体键码；旧的游戏功能映射仍可使用，重新编辑并确认后转为具体键码组合。按键未绑定或已移除时显示红色 `!`。
-- 触屏按钮和虚拟键盘键帽均为圆形，命中区域与圆形一致。外围有细环边框，按下/保持状态以绿色环高亮，编辑选中时为金色环；按钮文字缩至 80%。圆形填充和边框使用连续几何与约一个屏幕像素的透明过渡，不再按 GUI 像素画台阶；轮盘同步改用该渲染。文字仍使用 Minecraft 原有字体，仅将绘制起点对齐真实屏幕像素，保留像素字体风格。编辑器的工具栏、属性、子选项列表及确认/取消均为带深色背景、细边框和居中文字的矩形按钮，整个按钮区域都可点击，悬停高亮；右下角菜单向上展开四个文字选项，直接点击对应文字行选择。新触屏键默认不透明度为 30%；旧布局默认的 55% 自动迁移为 30%，其他自定义透明度保留。
-- **弹出菜单**：在按键属性中点“触发”切换到“弹出菜单”，再点“配置子选项”新增、编辑或删除项目。每项可单独命名并配置单键、组合键、鼠标键或 Smart 副键。保存后轻触菜单按键，在该按键附近展开文字列表（优先向上，空间不足时调整位置）；点选子选项并抬手后按下、释放一次，随后收起菜单；长按不连发。直接点击文字行选择，菜单统一使用深色背景与细边框，按最长文字宽度加内边距自动适配（超宽时限制在屏幕内）；无独立按钮图标或全屏遮罩，点击外部取消，不向底层传递点击；多项时支持翻页，空菜单显示配置提示。子选项不使用按住/切换模式，菜单沿用父按钮的世界/其他显示设置。
+- 触屏按钮和虚拟键盘键帽均为圆形，命中区域与圆形一致。外围有细环边框，按下/保持状态以绿色环高亮，编辑选中时为金色环；按钮文字缩至 80%。圆形填充和边框使用连续几何与约一个屏幕像素的透明过渡，不再按 GUI 像素画台阶；摇杆同步改用该渲染。文字仍使用 Minecraft 原有字体，仅将绘制起点对齐真实屏幕像素，保留像素字体风格。编辑器的工具栏、属性、子选项列表及确认/取消均为带深色背景、细边框和居中文字的矩形按钮，整个按钮区域都可点击，悬停高亮；右下角菜单向上展开三个文字选项，直接点击对应文字行选择。新触屏键默认不透明度为 30%；旧布局默认的 55% 自动迁移为 30%，其他自定义透明度保留。
+- **弹出菜单**：在按键属性中点“触发”切换到“弹出菜单”，再点“配置子选项”新增、编辑或删除项目。每项可单独命名并配置单键、组合键或鼠标键。保存后轻触菜单按键，在该按键附近展开文字列表（优先向上，空间不足时调整位置）；点选子选项并抬手后按下、释放一次，随后收起菜单；长按不连发。直接点击文字行选择，菜单统一使用深色背景与细边框，按最长文字宽度加内边距自动适配（超宽时限制在屏幕内）；无独立按钮图标或全屏遮罩，点击外部取消，不向底层传递点击；多项时支持翻页，空菜单显示配置提示。子选项不使用按住/切换模式，菜单沿用父按钮的世界/其他显示设置。
 - 新建按键默认大小为 24、映射为空，不再预选 Space。可修改名称、大小、不透明度和触发方式：按住触发、点击切换、弹出菜单。旧版“点按一次”自动迁移为按住触发，已有显式 Space 映射保留。切换按住时按钮高亮，再点一次释放。
 - “世界”和“其他”独立控制显示：世界表示未打开 GUI 的游戏画面；其他表示背包、机器、NEI、聊天、菜单等 GUI。可同时开启，也可全部关闭以保留但隐藏按钮。
 - 编辑操作统一放在屏幕顶部：布局页提供新增、编辑、删除、预览、保存和取消，窄屏自动换行；属性页顶部返回布局，虚拟键盘顶部切换键盘、清空、确定和取消。
-- 在布局画面点击选中并拖动位置，“编辑”修改属性，“删除”移除按钮。直接点击画面中的按钮或 WASD 轮盘进行选择；轮盘支持移动、缩放、隐藏。
+- 在布局画面点击选中并拖动位置，“编辑”修改属性，“删除”移除按钮。直接点击画面中的按钮进行选择；自由摇杆无需固定位置布局。
 - “预览”切换世界/其他布局；同一按钮在两种模式共用位置，需要不同位置时可分别新增两个按钮。按键重叠时最后新增的按钮优先。
-- 点“保存”立即生效，写入 `config/gtnheasytouch-layout.json`；“取消”或布局页 Esc 放弃草稿。首次使用会有一个“副”按钮，原轮盘保持显示。
+- 点“保存”立即生效，写入 `config/gtnheasytouch-layout.json`；“取消”或布局页 Esc 放弃草稿。旧布局的 Smart 副键迁移为普通“使用”按钮，新布局不自动添加。
 
-触屏按钮优先接收触点，按住后手指滑出仍归原按钮处理，松手释放，支持与轮盘和视角同时操作；按钮不向底层 GUI 发送鼠标点击。切换界面、失焦、死亡、隐藏世界 HUD 或触点重置会清理按键状态，切换按住也会重置。
+触屏按钮优先接收触点，按住后手指滑出仍归原按钮处理，松手释放，支持与摇杆和视角同时操作；按钮不向底层 GUI 发送鼠标点击。切换界面、失焦、死亡、隐藏世界 HUD 或触点重置会清理按键状态，切换按住也会重置。
 
 GUI 通过 lwjgl3ify 键盘事件队列接收组合键：先按下修饰键、再按普通键，释放时反向处理。虚拟按键状态与实体键盘状态合并，供 GUI 的 Shift/Ctrl 判断使用；多个触屏按钮共享修饰键时，最后一个按钮松开才释放。按住触发、点击切换均支持组合键；切换界面、失焦和触点重置会清理整个组合。尚未提供宏、输入法或自动连发。GUI 的 R/U 等悬停快捷键使用当前鼠标指向的物品，先触摸定位物品，再点自定义按键。
 
 ## 多点触控转发与检测
 
-使用 GTNH 现代 Java 版的 lwjgl3ify 3.x，在进入世界后执行客户端命令 **`/easytouch touch`**。命令不需要 OP，也不发送给服务器。打开页面后，用两根手指同时按住并分别移动：
+使用 GTNH 现代 Java 版的 lwjgl3ify 3.x，在进入世界后执行客户端命令 **`/easytouch touch`**。命令不需要 OP，也不发送给服务器。打开页面后，用手指按住并移动：
 
 - 监听状态应为“已连接”；`DOWN / MOVE / UP / CANCEL` 显示 SDL 是否启用了相应事件。
 - 绿色十字和手指编号表示 SDL 原生触点。当前触点数达到 2，且两个标记能独立移动，表示当前输入链路确实送来了独立的多指数据。抬起后当前数量应减少。
@@ -116,13 +125,7 @@ GUI 通过 lwjgl3ify 键盘事件队列接收组合键：先按下修饰键、�
 - “鼠标事件”在变化而原生触点始终为 0 时，先检查上方 SDL 事件开关，再检查串流软件的触点透传；单凭这个现象不能断定 UU 的所有模式都不支持。
 - “重置触点统计”清除触点事件计数、最后事件及历史峰值，仍按住的触点继续显示；鼠标和队列丢弃数统计整个监听会话。按 Esc 或“完成”退出。
 
-世界内由第一根原生触点控制手势，其他手指不会抢占：
-
-- 按下时先不点击；在 250ms 内松开且移动始终不超过屏幕短边的 1%，触发一次点击。
-- 移动超过短边的 1% 后进入拖拽，仅转动视角，沿用游戏鼠标灵敏度和反转设置；返回起点或松手也不补发点击。
-- 静止按住达到 500ms 后开始持续按键，松手释放；之后移动超过阈值会释放按键并进入拖拽。
-- 250～500ms 之间松开且未拖动，不触发操作。
-- 菜单、背包、机器、NEI、聊天和触点调试页中，按下立即定位鼠标并按住左键，移动可拖动，抬起释放；不应用世界内的阈值或 smart。
+世界右半屏由第一根原生触点控制手势，额外触点不抢占；左半屏摇杆和独立映射按钮可以同时操作。点击规则见“安装与使用”：双击窗口 250ms，静止保持阈值 250ms，位移阈值为屏幕短边的 1.5%（至少 6 像素）。快速滑动仅转视角，已进入按住状态后移动仍保持鼠标键。普通 UI 轻点延迟发左键，双击发右键，拖动发送对应鼠标按钮；物品长按菜单另按上文规则处理。
 
 切换界面、失焦、死亡、退出世界或触点重置会取消当前手势，恢复后需重新按下。SDL 自动生成的触摸鼠标事件统一过滤，避免重复点击或双倍转向；鼠标模拟的触点不参与手势，真实鼠标不交换左右键。`touch.enabled=false` 关闭触摸接管和过滤，恢复 SDL 原有输入。
 
@@ -143,16 +146,6 @@ touch {
 原生回调可能来自其他线程，因此先复制数据进入有界队列，再于 MC 客户端 tick 发布 `MinecraftForge.EVENT_BUS` 上的 [TouchInputEvent](src/main/java/io/github/wdy/easytouch/touch/TouchInputEvent.java)。该事件不可取消，只转发数据；坐标原点在窗口左上角，通常范围为 0..1，允许边界外坐标。失焦、切换世界、队列溢出或接口错误时发布 `RESET`，消费者应清除全部按住状态。模拟鼠标触点通过 `sample.simulated()` 区分。触控代码直接使用 `SDL_Event`、`SDL_TouchFingerEvent`、`SDL_EventFilter` 和 `Display.sdlWindowId`；lwjgl3ify、LWJGL3 的 Java 绑定作为 `compileOnly` 依赖，运行时由整合包提供，不把依赖或原生库打入 mod。
 
 `TouchInput` 和 `SdlTouchSource` 使用 `@Lwjgl3Aware`，防止 lwjgl3ify 的 [LWJGL2 重定向器](https://github.com/GTNewHorizons/lwjgl3ify/blob/3.0.37/src/main/java/me/eigenraven/lwjgl3ify/rfb/transformers/LwjglRedirectTransformer.java) 将 `org.lwjgl.sdl.*` 改写为不存在的 `org.lwjglx.sdl.*`。带此标记的 `TouchInput` 显式使用 `org.lwjglx.input.Mouse` 和 `org.lwjglx.opengl.Display`；其他类仍保留正常的 LWJGL2 兼容重写。如果旧版出现上述缺类错误，替换 Easy Touch jar 即可修复这处包名错误，无需额外安装 SDL jar。
-
-## 已有目标匹配覆盖规则
-
-目标匹配切换快捷键已移除；之前保存的手动规则继续生效。
-
-作用范围为同类目标，保存于 `config/gtnheasytouch.cfg` 的 `target_overrides.allow` / `target_overrides.deny`，重启和切换存档后继续生效。手持格雷工具且目标为格雷方块时强制禁用 smart，优先于手动规则；其余情况下手动规则优先于所有内置 matcher，不改写原来的白名单；即使床接口、GT/AE2 规则等仍然命中，手动禁用也能生效。手动编辑两份列表时如有冲突，禁用优先；退出游戏后从两份列表都删除对应条目可恢复默认规则。
-
-方块优先按 Forge“选取方块”的物品注册名和变体识别，因此朝向、位置、物品数量、容器内容和自定义名称不改变规则。GT 设备使用其机器编号，AE2 使用指向的部件，终端不会连带切换线缆；无法返回选取物品的方块退回精确方块注册名和世界元数据。规则不按坐标保存，也不区分仅由 NBT 表示的外观差异。这里仅调用选取结果查询，不给玩家物品，也不执行方块交互。
-
-实体按种类识别，玩家归入同一类，不按 UUID 或自定义名称区分。同种实体的手动规则也覆盖驯服等默认条件，例如关闭狼会同时影响野狼和宠物狼。没有实体注册名时使用精确实体类名。
 
 ## 配方树合成按钮
 
@@ -190,225 +183,34 @@ Ctrl + 滚轮仍由 NEI 原生处理；Shift + 滚轮保留原有的候选材料
 
 接口按 [GTNH 2.9.0 RC2 官方清单](https://github.com/GTNewHorizons/DreamAssemblerXXL/blob/master/releases/manifests/2.9.0-RC-2.json) 中的版本编译。NEI 是可选依赖，无需另外安装其他辅助模组；接口不兼容时记录日志并停用这项功能。
 
-## 默认白名单
-
-| 分类 | 默认触摸交互的对象 |
-| --- | --- |
-| 原版容器 | 箱子、陷阱箱、末影箱、漏斗、发射器、投掷器 |
-| 原版功能方块 | 工作台、熔炉及燃烧中的熔炉、酿造台、附魔台、铁砧、信标、床、唱片机 |
-| 床 | 原版床及其子类（包括 Et Futurum 彩色床）、Forge `isBed` 返回真的床（包括木匠床），覆盖床头/床尾和颜色变体 |
-| 作物 | `BlockCrops` 及其子类（小麦、胡萝卜、马铃薯和潘马斯全部田间作物）、瓜茎、地狱疣、可可；潘马斯果实和可采收树干、CropsNH／IC2 作物架、Natura 大麦/棉花及主世界/下界浆果丛；覆盖所有生长阶段 |
-| 开关与机关 | 木门、活板门、栅栏门、按钮、拉杆、中继器和比较器（包括通电状态） |
-| 生物 | 村民、牛、蘑菇牛、羊、猪、鸡、马/驴/骡；狼和猫仅在已驯服时触摸交互 |
-| 载具及装饰 | 船、普通矿车、运输矿车、漏斗矿车、物品展示框 |
-| Iron Chests | `IronChest:BlockIronChest` 的箱子变体 |
-| 匠魂 | 合成站/半砖合成站、工具装配站/装配台、零件加工台、模具桌；工作台按元数据区分 |
-| GT | 基础加工机（含蒸汽系列）、基础发电机、蒸汽锅炉、多方块控制器、输入输出仓/舱、电池缓冲箱、数字储罐及其量子储罐子类、量子箱家族 |
-| AE2 | 存储/合成/样板/接口/合成诊断终端、面板型接口；ME 箱子、陨石箱、驱动器、方块型接口、存储元件工作台、IO 端口、物质聚合器、磨具、压印器/高级压印器、安全终端、空间 IO 端口 |
-| 神秘时代 4 | 研究台、奥术工作台（按 TileEntity 的精确类名识别，不包含整个桌子方块） |
-
-完整注册名、元数据和匹配逻辑按类别放在 [whitelist/](src/main/java/io/github/wdy/easytouch/whitelist/) 下的独立 class 中，review 入口见下方。这些是明确列出的默认项，不会根据“具有背包”“能响应右键”等特征自动扩展。
-
-床在 smart 模式下左键交互、右键拆除；潜行时仍保留原版鼠标映射。新增床规则按 `BlockBed` 类型和 Forge 的 `isBed` 查询识别，不靠名称包含 `bed`，也不受颜色或注册名变化影响。已核对 RC2 所带的 [Et Futurum 2.6.60-GTNH 彩色床](https://github.com/GTNewHorizons/Et-Futurum-Requiem/blob/2.6.60-GTNH/src/main/java/ganymedes01/etfuturum/blocks/BlockDyedBed.java) 和 [Carpenter's Blocks 3.7.3-GTNH 木匠床](https://github.com/GTNewHorizons/CarpentersBlocks/blob/3.7.3-GTNH/src/main/java/com/carpentersblocks/block/BlockCarpentersBed.java)。只查询当前指向方块的床属性，不调用交互或睡眠逻辑来探测。
-
-作物在 smart 下触摸执行使用/交互，可收获原模组支持右键收获的成熟作物；潜行时触摸执行攻击。幼苗、未成熟和刚收获后的作物也保持触摸交互，避免成熟度改变下一次操作的含义。只读取方块类型，不探测交互、不修改成熟度或掉落，也不为原本没有右键收获的瓜茎、地狱疣等作物新增收获机制。
-
-潘马斯类型已核对 RC2 的 [harvestcraft 1.3.15-GTNH 开发包](https://nexus.gtnewhorizons.com/repository/releases/com/github/GTNewHorizons/harvestcraft/1.3.15-GTNH/harvestcraft-1.3.15-GTNH-dev.jar)；其他作物类型核对了 [CropsNH 2.0.134](https://github.com/GTNewHorizons/CropsNH/blob/2.0.134/src/main/java/com/gtnewhorizon/cropsnh/blocks/BlockCropSticks.java)、[Natura 2.8.24](https://github.com/GTNewHorizons/Natura/blob/2.8.24/src/main/java/mods/natura/blocks/crops/CropBlock.java) 和 [IC2 2.2.828 开发包](https://maven.ic2.player.to/net/industrial-craft/industrialcraft-2/2.2.828-experimental/industrialcraft-2-2.2.828-experimental-dev.jar)。可选模组按已确认的类家族识别，不新增运行时依赖。
-
-默认不包含抽屉、JABBA 储物桶、GT 管道/电缆/外壳、AE 线缆、普通建筑方块、玩家、敌对生物和未知模组生物。作物规则不泛化到所有 `IPlantable` / `IGrowable`：普通花草、树苗、甘蔗、仙人掌及瓜果方块仍按原操作处理，可通过 matcher 配置另行开启。食物、建筑方块、桶、弓、扳手和螺丝刀也不会因被拿在手中就触发触摸交互。例如：拿着方块对石头触摸仍执行挖掘；拿着格雷扳手对 GT 机器触摸执行攻击/挖掘，Smart 副键执行使用，避免工具操作被 smart 改写。
-
-手持 `gregtech.api.items.MetaGeneratedTool` 或其子类的工具，且目标方块注册域为 `gregtech:` 时，最高优先级禁用本次 smart 匹配（含机器、管线、外壳等格雷方块），即使用户规则明确允许交互也不例外。此时不显示“交互”提示，不修改全局 smart 开关或已保存规则；空手、非格雷工具、非格雷方块和实体目标继续遵循原规则。
-
-GT 只在 `BaseMetaTileEntity` 内检查白名单中的设备家族，排除管线宿主，并且不放行整个 `gregtech:gt.blockmachines`。AE2 使用原生 `IPartHost` 的部件选择接口，只匹配准星选中的部件，线缆或外观面板本身不触发触摸交互。模组缺失、接口不兼容、设备未同步或部件未识别时保持原版；接口异常会在日志中记录一次。兼容接口只读取状态，不执行右键或打开 GUI 来探测目标。
-
-触摸静止长按 0.25 秒后持续按住攻击/挖掘键，随后拖拽视角仍保持按住，松手时释放。长按过程中改变准星目标或目标规则不会切换动作。直接滑动不会启动长按。打开 GUI、失焦、死亡、切换世界或切换 smart 模式时清理触摸输入，返回后需重新按下。实际挖掘和交互由游戏原有逻辑执行，本模组不直接发送攻击或破坏数据包。
-
-## 配置 matcher
-
-退出游戏后编辑 `config/gtnheasytouch.cfg`，重启生效。每个 matcher 有独立的配置分类 `matchers.<id>`，并可通过该分类中的 `B:enabled=false` 单独禁用。各 matcher 自己声明所需配置，核心代码没有固定的规则类型枚举。
-
-| 配置分类 | 当前内置选项 |
-| --- | --- |
-| `matchers.vanilla_blocks` | `blocks`：方块注册名，可用 `@元数据` 限定变体 |
-| `matchers.beds` | `enabled`：按床类型和 Forge 床接口识别，默认开启；无需逐个添加床注册名 |
-| `matchers.crops` | `standardCrops`：匹配 `BlockCrops` 及子类、瓜茎、地狱疣和可可，默认开启；`classes`：额外作物方块类家族（包含子类），默认包含潘马斯果实/产物树干、CropsNH／IC2、Natura；`enabled=false` 关闭整个作物规则 |
-| `matchers.vanilla_entities` | `entities`：实体注册名；`tamedEntities`：必须已驯服的实体 |
-| `matchers.iron_chests` | `blocks`：箱子注册名 |
-| `matchers.tinkers_construct` | `blocks`：工作台注册名与元数据 |
-| `matchers.gregtech` | `machines`：GT 内部设备的具体类名或允许的父类家族 |
-| `matchers.applied_energistics` | `blocks`：方块注册名；`parts`：被准星选中的部件精确类名 |
-| `matchers.thaumcraft` | `tileEntities`：方块实体的精确类名 |
-
-首次加载会写入默认值，之后以保存的列表为准。删除条目不会被自动补回；空列表禁用对应匹配。内置列表不支持通配符。实体 matcher 自行保证 `tamedEntities` 的驯服要求优先于 `entities`。GT 内部设备编号不同于世界方块元数据，不要用 `gregtech:gt.blockmachines@设备编号` 区分机器。
-
-升级到 0.4.10 会自动添加默认开启的 `matchers.beds`，不改写已有名单；不需要删除旧配置。关闭该规则时，`vanilla_blocks.blocks` 中原有的 `minecraft:bed` 等显式条目仍会生效。
-
-升级到 0.4.12 会自动添加默认开启的 `matchers.crops`，不需要清空配置。作物规则的类名单与原版类型开关分别控制；`classes` 留空仅清除额外类家族，关闭整个规则请设置 `enabled=false`。已有目标手动禁用仍优先，想恢复默认时可移除对应的手动规则。
-
-例如，将原版方块 matcher 的列表缩小到箱子，同时关闭 Iron Chests matcher：
-
-```text
-matchers {
-    vanilla_blocks {
-        B:enabled=true
-        S:blocks <
-            minecraft:chest
-        >
-    }
-    iron_chests {
-        B:enabled=false
-    }
-}
-```
-
-未潜行且准星命中匹配目标（含手动规则）时，下方仅显示“交互”；潜行或未命中时不显示提示。提示跟随当前目标，仅表示轻触的 smart 动作；长按始终执行攻击/挖掘。`general.showHud=false` 可以关闭该提示。
-
-升级时保留全局开关和 HUD 设置。0.2.0 的 `whitelist` 列表会自动迁移一次：方块按注册名前缀分配到各 matcher，未知模组的自定义方块归入 `vanilla_blocks.blocks`；实体、宠物、方块实体、GT 设备与 AE2 部件列表分别迁入对应 matcher。空列表、自定义条目和元数据限制都保留，已存在的新配置优先。旧分类保留作参考，迁移后不再读取。0.1.0 的启发式 `rules` 仍不执行。
-
 ## 输入功能的代码划分
 
 [ClientInput](src/main/java/io/github/wdy/easytouch/ClientInput.java) 只负责注册、事件转发和 GUI/失焦/世界切换等共同清理时机。触摸输入逻辑放在 [input/](src/main/java/io/github/wdy/easytouch/input/)：
 
 | 文件 | 职责 |
 | --- | --- |
-| [SmartTouchInput.java](src/main/java/io/github/wdy/easytouch/input/SmartTouchInput.java) | 触摸 smart 目标判定和准星提示 |
+| [ClickGesture.java](src/main/java/io/github/wdy/easytouch/input/ClickGesture.java) | 统一单击、双击、拖动与取消 |
+| [SwordAttack.java](src/main/java/io/github/wdy/easytouch/input/SwordAttack.java) | 持剑对实体立即攻击的只读判断 |
 | [TouchLook.java](src/main/java/io/github/wdy/easytouch/input/TouchLook.java) | 世界内轻触、长按、拖拽阈值及取消 |
 | [TouchMouse.java](src/main/java/io/github/wdy/easytouch/input/TouchMouse.java) | GUI 内触摸模拟鼠标点击与拖动 |
-| [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 轻触选择攻击/交互，长按持续保持攻击 |
+| [TouchActions.java](src/main/java/io/github/wdy/easytouch/input/TouchActions.java) | 将左键/右键状态提交给攻击/使用绑定 |
 | [KeyStateMerger.java](src/main/java/io/github/wdy/easytouch/input/KeyStateMerger.java) | 攻击/使用按键的状态合并、一次点击和队列清理 |
 | [MinecraftInput.java](src/main/java/io/github/wdy/easytouch/input/MinecraftInput.java) | Minecraft 环境判断和底层按键读写 |
 
 [touch/](src/main/java/io/github/wdy/easytouch/touch/) 包含独立的原始触点管线：`SdlTouchSource` 管理 SDL 回调及原始字段复制，`TouchQueue` 负责跨线程传递与状态清理，`TouchTracker` 维护多指状态，`TouchInput` 在客户端线程发布事件并注册检测入口，`TouchDebugScreen` 显示检测结果。`SdlTouchMouseFilter` 过滤自动生成的模拟鼠标事件并记录物理按钮，`GuiTouchMouse` 注入 GUI 鼠标事件；世界内触摸动作由 `ClientInput` 接入按键合并层。
 
-smart 通过 `Source` 提交攻击和使用按键的映射与点击请求，由底层统一写入 Minecraft。结束接管时恢复当前物理按键状态，进入 GUI 或切换模式时由入口清理正在进行的输入和待执行点击。
+触摸动作通过 `Source` 提交攻击和使用按键的映射与点击请求，由底层统一写入 Minecraft。结束接管时恢复当前物理按键状态，进入 GUI 或切换模式时由入口清理正在进行的输入和待执行点击。
 
-[TargetIdentity](src/main/java/io/github/wdy/easytouch/matching/TargetIdentity.java) 生成稳定的目标种类标识；[TargetOverrides](src/main/java/io/github/wdy/easytouch/matching/TargetOverrides.java) 保存手动允许/禁用结果。[MatcherRegistry](src/main/java/io/github/wdy/easytouch/matching/MatcherRegistry.java) 在默认匹配之前应用覆盖规则，没有相关种类的覆盖时不调用额外的选取方块查询。GT/AE2 类型识别分别核对了 RC2 的 [BlockMachines.getDamageValue](https://github.com/GTNewHorizons/GT5-Unofficial/blob/5.09.54.205/src/main/java/gregtech/common/blocks/BlockMachines.java) 和 [BlockCableBus.getPickBlock](https://github.com/GTNewHorizons/Applied-Energistics-2-Unofficial/blob/rv3-beta-1080-GTNH/src/main/java/appeng/block/networking/BlockCableBus.java)。
 
 [NeiCraftingTreeInput](src/main/java/io/github/wdy/easytouch/nei/NeiCraftingTreeInput.java) 仅在客户端加载 NEI 时注册，负责配方树按钮、滚轮事件、可合成状态检查和返回原容器启动 NEI 自动合成。[NeiTreeQuantityScroll](src/main/java/io/github/wdy/easytouch/nei/NeiTreeQuantityScroll.java) 复用原生画布命中、数量规则和刷新方法，使用实时鼠标坐标适配 GUI 缩放及画布缩放、平移，不模拟 Ctrl 按键。
 
 [NeiFavoriteTreeShortcut](src/main/java/io/github/wdy/easytouch/nei/NeiFavoriteTreeShortcut.java) 在 NEI 的末阶段按键回调中读取悬停物品及收藏配方，调用原生 `GuiFavoriteButton.saveRecipeInBookmark()` 并打开新组。无需注册额外按键，也不复制 NEI 的递归配方算法。
 
-## 按 matcher review 和扩展
-
-代码按规则和匹配机制分开：
-
-- [whitelist/](src/main/java/io/github/wdy/easytouch/whitelist/) 仅包含具体规则类，各自声明默认名单、配置和条件，方便逐个 review。
-- [matching/](src/main/java/io/github/wdy/easytouch/matching/) 包含接口、上下文、配置读取与迁移、注册、组合、合并索引和目标解析。
-
-| 规则文件 | 匹配方式 |
-| --- | --- |
-| [VanillaBlockMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/VanillaBlockMatcher.java) | `SimpleMatcher`：原版方块注册名及元数据 |
-| [BedMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/BedMatcher.java) | `BlockBed` 类型及 Forge `isBed` 查询，保留实际床头/床尾坐标；接口异常按类型记录一次并回退 |
-| [CropMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/CropMatcher.java) | 原版作物类型及可配置的模组作物类家族；覆盖全部生长阶段，只检查类型，不执行交互或读取成熟度 |
-| [VanillaEntityMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/VanillaEntityMatcher.java) | `AnyOfMatcher`：普通实体索引 + 宠物驯服条件；合并前先从普通索引排除需要驯服的实体 |
-| [IronChestsMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/IronChestsMatcher.java) | `SimpleMatcher`：Iron Chests 箱子 |
-| [TinkersConstructMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/TinkersConstructMatcher.java) | `SimpleMatcher`：匠魂工作台及允许的元数据 |
-| [GregTechMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/GregTechMatcher.java) | GT 宿主、内部设备家族及接口读取 |
-| [AppliedEnergisticsMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/AppliedEnergisticsMatcher.java) | `AnyOfMatcher`：AE2 方块索引 + 按命中坐标选择部件 |
-| [ThaumcraftMatcher.java](src/main/java/io/github/wdy/easytouch/whitelist/ThaumcraftMatcher.java) | 方块实体的精确类型 |
-
-只匹配方块或实体注册名时，继承 [SimpleMatcher](src/main/java/io/github/wdy/easytouch/matching/SimpleMatcher.java)，声明名单即可，不必编写 `matches()`：
-
-```java
-public final class ExampleMatcher extends SimpleMatcher {
-    public ExampleMatcher(MatcherSettings settings) {
-        super(builder()
-            .blocks(settings.strings("blocks", "Allowed block IDs, optionally @metadata.",
-                "example:chest", "example:table@2"))
-            .entities(settings.strings("entities", "Allowed entity IDs.", "ExampleMob")));
-    }
-}
-```
-
-`blocks()`、`entities()` 均可省略、重复调用，也可直接接收注册名字符串。`SimpleMatcher.builder().blocks("example:chest").build()` 可用于组合规则。构造后名单不可变，修改 builder 不会影响已构造或注册的 matcher。
-
-[MatcherRegistry](src/main/java/io/github/wdy/easytouch/matching/MatcherRegistry.java) 在注册时把所有启用的 `SimpleMatcher` 合并成方块、实体两组哈希集合。运行时只查询合并后的索引，最多两次方块集合查询（ID 和 ID@元数据）及一次实体集合查询，查询次数不随简单规则类的数量增长。各类仍保留独立的配置和开关；禁用规则不参与合并。无需改动现有配置文件。
-
-需要同时声明简单规则和自定义判断时，继承 [AnyOfMatcher](src/main/java/io/github/wdy/easytouch/matching/AnyOfMatcher.java)，在构造函数中传入各个 matcher。它表示“任意一个命中即可”；注册器会递归展开组合，将简单部分纳入同一索引，仅保留复杂部分逐个判断。原版实体和 AE2 类提供了完整示例。
-
-需要同时满足 ID 和其他条件的规则，直接实现 [TargetMatcher](src/main/java/io/github/wdy/easytouch/matching/TargetMatcher.java)。不要把其中的 ID 单独作为 `AnyOfMatcher` 的分支，否则单凭 ID 就会放行。接口只有一个必须实现的方法：
-
-```java
-public interface TargetMatcher {
-    boolean matches(TargetContext context);
-}
-```
-
-[TargetContext](src/main/java/io/github/wdy/easytouch/matching/TargetContext.java) 提供世界、玩家、手持物品、射线命中、方块、实体和 TileEntity，便于新增状态条件。[MatcherSettings](src/main/java/io/github/wdy/easytouch/matching/MatcherSettings.java) 提供 matcher 私有的列表、布尔、整数和文本选项。新规则不必使用名单，也可以自行判断方块状态、玩家潜行或命中面。
-
-例如，新增“只允许从顶部操作指定方块”的 matcher：
-
-```java
-public final class TopFaceMatcher implements TargetMatcher {
-    private final String blockId;
-
-    public TopFaceMatcher(MatcherSettings settings) {
-        blockId = settings.text("blockId", "example:machine", "Allowed block ID.");
-    }
-
-    @Override
-    public boolean matches(TargetContext context) {
-        return context.isBlock() && blockId.equals(context.blockId())
-            && context.hit().sideHit == 1;
-    }
-}
-```
-
-在 [MatcherRegistry.builtIns()](src/main/java/io/github/wdy/easytouch/matching/MatcherRegistry.java) 的注册链中加一行：
-
-```java
-.register("top_face", TopFaceMatcher::new)
-```
-
-即可生成 `matchers.top_face` 配置并参与运行时匹配。无需修改 `TargetResolver`、`TouchConfig`、其他 matcher 或旧配置迁移代码。也可以在已有 registry 上调用 `register()` 注册规则。注册 id 必须唯一，支持小写字母、数字和下划线。
-
-registry 先检查手动目标规则；没有对应的强制允许/禁用时，再查合并后的简单索引，未命中时按注册顺序调用剩余的复杂 matcher。默认 matcher 中任意一个返回 `true` 就匹配，全部返回 `false` 则保持原版；单个 matcher 的 `false` 仍不能否决其他 matcher，手动禁用通过独立的优先覆盖层实现。合并会改变求值顺序并提前结束查询，matcher 只能读取状态，不应依赖调用次数、执行交互、创建 GUI 或发送操作数据包。`SimpleMatcher` 和 `AnyOfMatcher` 的 `matches()` 均为 `final`，避免子类覆盖的条件在合并时丢失。
-
 ## 触摸板
 
-通过右下角配置按钮左侧的独立触摸板图标切换输入方式，开启时图标高亮；配置菜单内不再提供此切换项。触摸板模式隐藏普通映射键和轮盘，不显示鼠标控制器。旧版独立鼠标映射和控制器位置不再使用，其他映射保持原有配置。
+点击右下角触摸板图标开启或关闭。单指快速滑动移动光标；单击等待 250ms 后发左键，250ms 内同位置再次点击只发右键。静止按住 250ms 后进入左键拖动；双击时第二次按住 250ms 后进入右键拖动，松手释放。额外手指不触发右键、滚动或接管当前手势。
 
-- 单指直接滑动：相对移动光标，抬手后重新落指不会跳转位置；世界中用于转动视角。
-- 单指轻点：左键单击，需在 300 毫秒内抬起且位移不超过 6 个 GUI 像素。
-- 单指先保持按住至少 250 毫秒，再滑动超过 6 个 GUI 像素：按下左键并移动，抬指释放左键。已经开始的普通移动不会因后续停顿变成左键拖拽。
-- 第二指落下：立即按下右键，无需等待或滑动。双指同时接触时，任意一指移动都按该指的相对位移移动光标。若之前正在左键拖拽，先释放左键，再按下右键。
-- 任一指抬起：右键保持按下，剩余单指移动不移动光标；补回第二指后恢复双指移动。两根手指地位相同，可轮流抬起和重新落下，落指不跳光标也不重复按下右键。最后一指抬起才释放右键。因此双指轻点自然形成一次右键按下、释放，不额外补发单击。
-
-双指滚动已删除，不支持轻点后再次落指触发拖动。单指长按静止不会单独按下鼠标键，超过轻点时间后直接抬起也不产生点击。出现第三指或收到取消事件会释放鼠标键，等待本轮手指全部抬起。GUI 之间切换（包括布局编辑器）或失焦只取消手势并释放按键，保留触摸板模式；返回游戏世界时自动退出，也可通过触摸板图标手动关闭。
-
-GUI 触摸板的移动会在渲染帧更新，按下和释放仍按顺序交给游戏输入循环；每帧在 Mouse Tweaks 采样前恢复模拟按住状态，避免拖拽过程中被误判为松键。
-
-```mermaid
-stateDiagram-v2
-    state "空闲" as Idle
-    state "单指待判定" as Single
-    state "普通移动" as Pointer
-    state "左键拖拽" as Left
-    state "右键拖拽：双指" as Right
-    state "右键保持：剩余单指" as Held
-    state "等待所有手指抬起" as Wait
-    [*] --> Idle
-    Idle --> Single: 第一指落下
-    Single --> Pointer: 250ms前滑动超过6px
-    Single --> Left: 按住至少250ms后滑动超过6px / 按下左键
-    Single --> Idle: 抬指 / 满足轻点条件则左键单击
-    Pointer --> Pointer: 单指滑动 / 移动光标
-    Pointer --> Idle: 抬指
-    Left --> Left: 单指滑动 / 按住左键移动
-    Left --> Idle: 抬指 / 释放左键
-    Single --> Right: 第二指落下 / 按下右键
-    Pointer --> Right: 第二指落下 / 按下右键
-    Left --> Right: 第二指落下 / 释放左键再按下右键
-    Right --> Right: 任意一指滑动 / 相对移动光标
-    Right --> Held: 任意一指抬起 / 保持右键
-    Held --> Held: 剩余单指滑动 / 不移动光标
-    Held --> Right: 补回第二指 / 不跳光标、不重复按键
-    Held --> Idle: 最后一指抬起 / 释放右键
-    Right --> Wait: 第三指落下 / 释放右键
-    Wait --> Idle: 所有手指抬起
-```
-
-所有手势状态收到 RESET、切换 GUI 或失焦：释放鼠标键并回到手势空闲，但保留触摸板模式；返回世界或手动关闭时才退出该模式。单个手指的 CANCEL 会释放按键，剩余手指必须全部抬起，不触发点击。
+切换 GUI、失焦、重置触点会取消待执行点击并释放按键；返回世界时退出触摸板。保留多触点输入管线，供摇杆、视角与独立映射按钮同时使用，不再提供双指组合手势。
 
 ## 构建
 

@@ -2,8 +2,6 @@ package io.github.wdy.easytouch.layout;
 
 import java.io.*;
 import java.util.*;
-import java.util.function.Supplier;
-import io.github.wdy.easytouch.Action;
 import io.github.wdy.easytouch.TouchConfig;
 import io.github.wdy.easytouch.touch.TouchInput;
 import cpw.mods.fml.common.eventhandler.EventPriority;
@@ -27,7 +25,6 @@ public final class TouchButtons {
     private final File file;
     private final boolean enabled;
     private final TouchConfig config;
-    private final Supplier<Action> secondary;
     private final GlobalTouchMenu menu;
     private final MappingMenu mappingMenu;
     private final Runnable reset;
@@ -42,8 +39,7 @@ public final class TouchButtons {
     public boolean openRequested;
     public String loadError;
 
-    public TouchButtons(TouchConfig config, KeyStateMerger.Source source, Runnable resetInputs, Supplier<Action> secondary) {
-        this.secondary = secondary;
+    public TouchButtons(TouchConfig config, KeyStateMerger.Source source, Runnable resetInputs) {
         this.config = config;
         this.file = config.layoutFile; this.enabled = config.touchEnabled; this.source = source;
         chords = new ChordState((code, down) -> {
@@ -67,10 +63,9 @@ public final class TouchButtons {
         }, item -> {
             boolean wasMouse = mouseControl.isOpen();
             reset.run();
-            if (item == 1) config.toggle();
-            else if (item == 2) config.toggleButtons();
-            else if (item == 3 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
-            else if (item == 4) config.toggleAutoStep();
+            if (item == 1) config.toggleButtons();
+            else if (item == 2 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
+            else if (item == 3) config.toggleAutoStep();
             else if (item == GlobalTouchMenu.TOUCHPAD) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
@@ -87,13 +82,6 @@ public final class TouchButtons {
     }
     public void save(TouchLayout next) throws IOException { next.save(file); cancel(); layout = next.copy(); loadError = null; }
     public List<Integer> keys(TouchLayout.Button b) {
-        if (b.smartSecondary) {
-            if (mc.currentScreen != null || mc.thePlayer == null || mc.theWorld == null) return Collections.emptyList();
-            Set<Integer> queued = keyboard.queuedKeys();
-            boolean shift = queued.contains(42) || queued.contains(54) || queued.contains(mc.gameSettings.keyBindSneak.getKeyCode());
-            int code = ((!shift && secondary.get() == Action.ATTACK) ? mc.gameSettings.keyBindAttack : mc.gameSettings.keyBindUseItem).getKeyCode();
-            return ChordState.valid(code) ? Collections.singletonList(code) : Collections.emptyList();
-        }
         if (!b.keys.isEmpty()) return ChordState.normalize(b.keys);
         int code = key(b);
         return ChordState.valid(code) ? Collections.singletonList(code) : Collections.emptyList();
@@ -114,7 +102,7 @@ public final class TouchButtons {
     private boolean menuAvailable() {
         return enabled && Display.isActive() && (mc.currentScreen != null || mc.thePlayer != null && !mc.thePlayer.isDead && mc.inGameHasFocus);
     }
-    public boolean visible(TouchLayout.Button b) { return mc.currentScreen == null ? b.world : b.other && (b.mode == 3 || !b.smartSecondary); }
+    public boolean visible(TouchLayout.Button b) { return mc.currentScreen == null ? b.world : b.other; }
     public boolean accept(TouchSample s) {
         if (s.kind == TouchSample.Kind.RESET || !menuAvailable()) { menu.reset(); cancel(); return false; }
         ScaledResolution r = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
@@ -162,6 +150,7 @@ public final class TouchButtons {
 
     public int mouseFlags() { return mouse.flags(); }
     public boolean mouseHeld(int button) { return mouse.held(button); }
+    public void tickMouse(long now) { mouseControl.tick(now); }
     public void flushMouse() { mouse.flush(); }
     public void flushMouseMotion() { mouse.flushMotion(); }
     public void cancel() {
@@ -188,8 +177,7 @@ public final class TouchButtons {
     }
     private static final int MENU_PADDING = 8;
     private String[] menuLabels() {
-        return new String[]{"Smart: " + (config.enabled ? "开启" : "关闭"),
-            config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
+        return new String[]{config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
             mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射",
             "自动上台阶：" + (config.autoStep ? "开启" : "关闭")};
     }

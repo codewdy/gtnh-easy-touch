@@ -3,7 +3,7 @@ package io.github.wdy.easytouch.input;
 import io.github.wdy.easytouch.touch.TouchSample;
 import io.github.wdy.easytouch.input.KeyStateMerger.Key;
 
-/** A fixed left-hand wheel owns its contact until release, even outside its bounds. */
+/** A floating left-hand joystick owns its contact until release, even outside its bounds. */
 public final class TouchMovement {
     private final KeyStateMerger.Source keys;
     private boolean active;
@@ -14,17 +14,11 @@ public final class TouchMovement {
     public TouchMovement(KeyStateMerger.Source keys) { this.keys = keys; }
 
     public static float radius(int width, int height) {
-        return Math.min(48f, Math.min(width * .18f, height * .22f)) * layout().wheelScale;
+        return Math.min(48f, Math.min(width * .18f, height * .22f));
     }
-    public static float centerX(int width, int height) {
-        float r = radius(width,height);
-        return layout().wheelX < 0 ? r+12 : r + layout().wheelX * Math.max(0,width-2*r);
-    }
-    public static float centerY(int width, int height) {
-        float r = radius(width,height);
-        return layout().wheelY < 0 ? height-r-36 : r + layout().wheelY * Math.max(0,height-2*r);
-    }
-    private static io.github.wdy.easytouch.layout.TouchLayout layout() { return io.github.wdy.easytouch.layout.TouchButtons.instance.layout; }
+    public boolean active() { return active; }
+    public float centerX() { return centerX; }
+    public float centerY() { return centerY; }
     public int horizontal() { return horizontal; }
     public int vertical() { return vertical; }
 
@@ -36,22 +30,21 @@ public final class TouchMovement {
 
     /** Returns true for contacts reserved for movement; other contacts remain available for looking. */
     public boolean accept(TouchSample sample, int w, int h, boolean enabled) {
-        if (!enabled || !layout().wheelVisible || sample.kind == TouchSample.Kind.RESET) {
+        if (!enabled || sample.kind == TouchSample.Kind.RESET) {
             cancel();
             return false;
         }
         if (sample.simulated() || !sample.valid()) return false;
         if (!active && sample.kind == TouchSample.Kind.DOWN) {
             float r = radius(w, h);
-            float dx = sample.x * w - centerX(w, h), dy = sample.y * h - centerY(w, h);
-            if (dx * dx + dy * dy > r * r) return false;
+            if (sample.x >= .5f) return false;
             active = true;
             device = sample.deviceId;
             finger = sample.fingerId;
             width = w;
             height = h;
-            centerX = centerX(w, h);
-            centerY = centerY(w, h);
+            centerX = sample.x * w;
+            centerY = sample.y * h;
             radius = r;
         }
         if (!active || sample.deviceId != device || sample.fingerId != finger) return false;

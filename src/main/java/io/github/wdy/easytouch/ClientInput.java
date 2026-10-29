@@ -3,7 +3,7 @@ package io.github.wdy.easytouch;
 import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.AutoStep;
 import io.github.wdy.easytouch.input.MinecraftInput;
-import io.github.wdy.easytouch.input.SmartTouchInput;
+import io.github.wdy.easytouch.input.SwordAttack;
 import io.github.wdy.easytouch.input.TouchLook;
 import io.github.wdy.easytouch.input.TouchHotbar;
 import io.github.wdy.easytouch.input.TouchMovement;
@@ -35,15 +35,13 @@ public final class ClientInput {
     private final TouchMovement movement = new TouchMovement(keys.newSource());
     private final AutoStep autoStep = new AutoStep();
     private final TouchConfig config;
-    private final SmartTouchInput smartTouch;
     private final TouchLook touchLook;
     private final KeyStateMerger.Source touchKeys = keys.newSource();
 
     private ClientInput(TouchConfig config) {
         this.config = config;
-        smartTouch = new SmartTouchInput(input, config);
-        new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); }, smartTouch::touchSecondary);
-        final TouchActions actions = new TouchActions(touchKeys, smartTouch::touchTap);
+        new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); });
+        final TouchActions actions = new TouchActions(touchKeys);
         touchLook = new TouchLook(new TouchLook.Port() {
             public boolean inWorld() { return input.inWorld(); }
             public int width() { return input.mc.displayWidth; }
@@ -51,11 +49,8 @@ public final class ClientInput {
             public void turn(float dx, float dy) {
                 input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
             }
-            public void click() { actions.click(); }
-            public void secondaryClick() { touchKeys.click(smartTouch.touchSecondary() == Action.ATTACK
-                ? KeyStateMerger.Key.ATTACK : KeyStateMerger.Key.USE); }
-            public void press() { actions.press(); }
-            public void release() { actions.release(); }
+            public void button(int button, boolean down) { actions.button(button, down); }
+            public boolean immediate() { return SwordAttack.immediate(input.mc); }
         });
     }
 
@@ -96,7 +91,7 @@ public final class ClientInput {
                 config.touchEnabled && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
             event.consumed = true;
         } else if (!movement.accept(event.sample, resolution.getScaledWidth(), resolution.getScaledHeight(),
-                config.touchEnabled && config.buttonsVisible && input.inWorld() && !input.mc.gameSettings.hideGUI)) {
+                config.touchEnabled && input.inWorld())) {
             touchLook.accept(event.sample);
         }
         keys.sync(input.inWorld());
@@ -134,7 +129,7 @@ public final class ClientInput {
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
         if (!input.inWorld()) cancelInputs();
-        if (!config.touchEnabled || !config.buttonsVisible || input.mc.gameSettings.hideGUI) movement.cancel();
+        if (!config.touchEnabled) movement.cancel();
         if (!config.touchEnabled || input.mc.gameSettings.hideGUI) hotbar.cancel();
         if (event.phase == TickEvent.Phase.START) {
             touchLook.tick(TouchInput.nanoTime());
@@ -159,8 +154,6 @@ public final class ClientInput {
         }
     }
 
-    @SubscribeEvent
-    public void hud(RenderGameOverlayEvent.Text event) { smartTouch.hud(event); }
 
     @SubscribeEvent
     public void wheel(RenderGameOverlayEvent.Post event) {

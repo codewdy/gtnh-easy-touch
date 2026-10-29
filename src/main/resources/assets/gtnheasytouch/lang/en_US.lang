@@ -5,16 +5,8 @@ easytouch.touch.status.disabled=Touch forwarding is disabled. Enable touch.enabl
 easytouch.touch.status.failed=Touch listener failed and was disabled. See [Touch] messages in the log.
 easytouch.touch.count=Native contacts: %s    Peak simultaneous contacts: %s
 easytouch.touch.events=Native touch events: %s  Mouse-simulated touch: %s  Mouse events: %s  Queue drops: %s
-easytouch.touch.hint=Hold two fingers and move them independently. Green marks native touch; gray marks mouse-simulated touch.
+easytouch.touch.hint=Touch and move a finger. Green marks native touch; gray marks mouse-simulated touch.
 easytouch.touch.waiting=No native touch received. If only mouse counts change, check touch passthrough in your streaming app.
-easytouch.target.enabled=Smart enabled for this target type: %s
-easytouch.target.disabled=Smart disabled for this target type: %s
-easytouch.target.unavailable=Point at a block or entity with an identifiable type first.
-easytouch.target.globalOff= (Saved; the global smart switch is still off.)
-easytouch.target.players=Players
-easytouch.enabled=Smart touch: ON
-easytouch.disabled=Smart touch: OFF (touch uses attack)
-easytouch.hud=Interact
 easytouch.craftTree.noGroup=The bookmark group for this recipe tree no longer exists.
 easytouch.craftTree.inactive=Return to the current recipe tree to use this action.
 easytouch.craftTree.notCraftable=The available materials or container cannot perform any step in this crafting chain.
@@ -45,3 +37,5 @@ easytouch.craftTree.buttonTryCraft=Try Craft
 easytouch.craftTree.tryCraftHint=Skip the feasibility check and let NEI try this tree; cyclic recipes may still not complete.
 
 easytouch.key.worldUsage=Show NEI usages of targeted block
+
+easytouch.neiMenu.8=Collect

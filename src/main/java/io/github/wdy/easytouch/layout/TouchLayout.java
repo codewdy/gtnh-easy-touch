@@ -10,7 +10,7 @@ import java.util.*;
 /** User layout is saved atomically; the editor works on a separate copy. */
 public final class TouchLayout {
     private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
-    public int version = 7;
+    public int version = 8;
     public List<Button> buttons = new ArrayList<Button>();
     public float wheelX = -1, wheelY = -1, wheelScale = 1;
     public boolean wheelVisible = true;
@@ -28,26 +28,21 @@ public final class TouchLayout {
             return Circle.hit(px, py, left(w), top(h), size);
         }
     }
-    private void addSecondary() {
-        for (Button b : buttons) if (b.smartSecondary) return;
-        Button b = new Button(); b.smartSecondary = true; b.label = "副"; b.x = .9f; b.y = .65f;
-        buttons.add(b);
-    }
     public TouchLayout copy() { return JSON.fromJson(JSON.toJson(this), TouchLayout.class); }
     public static TouchLayout load(File path) throws IOException {
         if (!path.exists()) {
-            TouchLayout layout = new TouchLayout(); layout.addSecondary(); return layout;
+            return new TouchLayout();
         }
         try (Reader reader = new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8)) {
             com.google.gson.JsonObject object = new com.google.gson.JsonParser().parse(reader).getAsJsonObject();
             boolean legacy = !object.has("version");
-            boolean needsSecondary = legacy || object.get("version").getAsInt() < 3;
             TouchLayout layout = JSON.fromJson(object, TouchLayout.class);
             if (layout == null || layout.buttons == null) throw new IOException("Invalid touch layout");
             layout.buttons.removeAll(Collections.singleton(null));
             // Mouse control now belongs to the global menu, not a layout mapping.
             layout.buttons.removeIf(b -> b.mode == 4);
             for (Button b : layout.buttons) {
+                migrate(b);
                 b.keys = ChordState.normalize(b.keys);
                 if (legacy && b.opacity == 55) b.opacity = 30;
                 b.x = clamp(b.x); b.y = clamp(b.y);
@@ -57,6 +52,7 @@ public final class TouchLayout {
                 if (b.options == null) b.options = new ArrayList<Button>();
                 b.options.removeAll(Collections.singleton(null));
                 for (Button option : b.options) {
+                    migrate(option);
                     option.keys = ChordState.normalize(option.keys);
                     if (!ChordState.valid(option.key)) option.key = 0;
                     if (option.label == null) option.label = "按键";
@@ -68,13 +64,18 @@ public final class TouchLayout {
                 if (b.label == null) b.label = "按键";
                 if (b.binding == null) b.binding = "";
             }
-            if (needsSecondary) layout.addSecondary();
-            layout.version = 7;
+            layout.version = 8;
             layout.wheelScale = Float.isFinite(layout.wheelScale) ? Math.max(.5f, Math.min(2, layout.wheelScale)) : 1;
             layout.wheelX = layout.wheelX < 0 ? -1 : clamp(layout.wheelX);
             layout.wheelY = layout.wheelY < 0 ? -1 : clamp(layout.wheelY);
             return layout;
         } catch (RuntimeException ex) { throw new IOException("Invalid touch layout", ex); }
+    }
+    private static void migrate(Button b) {
+        if (!b.smartSecondary) return;
+        b.smartSecondary=false;
+        b.binding="key.use"; b.key=0; b.keys=new ArrayList<Integer>();
+        b.label="使用";
     }
     public void save(File path) throws IOException {
         Path temp = Files.createTempFile(path.getParentFile().toPath(), "touch-layout-", ".tmp");

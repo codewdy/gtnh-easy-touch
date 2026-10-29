@@ -40,6 +40,7 @@ public final class MouseControl {
             @Override public void button(int index,boolean down) { button.accept(index-100,down); }
         });
     }
+    public void tick(long now) { if (open) gestures.tick(now); }
     public boolean isOpen() { return open; }
     public void open() { reset(); open=true; syncPointer(); }
     public void releaseInputs() { gestures.cancel(); }

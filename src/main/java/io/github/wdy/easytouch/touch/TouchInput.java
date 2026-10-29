@@ -100,6 +100,8 @@ public final class TouchInput {
         });
     }
 
+    public static boolean guiAwaitingSecond() { return installed != null && installed.guiMouse.awaitingSecond(); }
+
     public static boolean guiMouseHeld() { return installed != null && installed.guiMouse.held(); }
 
     /** Lets an item gesture use the same mouse owner and physical-button merging as ordinary GUI touch. */
@@ -163,6 +165,8 @@ public final class TouchInput {
         }
         dispatchPending();
         if (!active) return;
+        guiMouse.tick(nanoTime());
+        io.github.wdy.easytouch.layout.TouchButtons.instance.tickMouse(nanoTime());
         io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
         if (!Display.isActive() || mc.currentScreen == null) guiMouse.cancel();
         syncMouseButtons();

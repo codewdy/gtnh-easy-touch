@@ -37,7 +37,7 @@ public final class NeiTouchMenu {
     private static final int ROW = 22;
     private static final int[] PANEL_ACTIONS = {1, 2, 3, 4};
     private static final int[] RECIPE_ACTIONS = {1, 2, 3};
-    private static final int[] INVENTORY_ACTIONS = {0, 5, 6};
+    private static final int[] INVENTORY_ACTIONS = {0, 5, 8, 6};
     private static final int[] INVENTORY_NEI_ACTIONS = {1, 2, 3, 4, 7};
     private int[] actions = PANEL_ACTIONS;
     private final Minecraft mc = Minecraft.getMinecraft();
@@ -69,10 +69,8 @@ public final class NeiTouchMenu {
             public void cancelDrag() { TouchInput.cancelGuiTouch(); }
             public void menu() { menuOpen = true; }
             public void tap(TouchSample down, TouchSample up) {
-                if (inventorySelection != null) {
-                    TouchInput.dragGuiTouch(down);
-                    TouchInput.dragGuiTouch(up);
-                }
+                TouchInput.dragGuiTouch(down);
+                TouchInput.dragGuiTouch(up);
             }
         });
     }
@@ -80,7 +78,14 @@ public final class NeiTouchMenu {
     public static void install() {
         try {
             NeiTouchMenu menu = new NeiTouchMenu();
-            TouchInput.setGuiInterceptor(menu::accept);
+            NeiSearchTouch search = new NeiSearchTouch();
+            TouchInput.setGuiInterceptor(sample -> {
+                boolean consumed = menu.accept(sample);
+                if (!consumed || sample.kind == TouchSample.Kind.RESET) consumed |= search.accept(sample);
+                return consumed;
+            });
+            MinecraftForge.EVENT_BUS.register(search);
+            FMLCommonHandler.instance().bus().register(search);
             MinecraftForge.EVENT_BUS.register(menu);
             FMLCommonHandler.instance().bus().register(menu);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
@@ -136,7 +141,8 @@ public final class NeiTouchMenu {
                 }
                 return true;
             }
-            if (sample.kind != TouchSample.Kind.DOWN || TouchInput.guiMouseHeld()) return false;
+            if (sample.kind != TouchSample.Kind.DOWN || TouchInput.guiMouseHeld()
+                    || TouchInput.guiAwaitingSecond()) return false;
             Widget target = panelAt(x, y);
             if (target == null) target = recipeTargets.widgetAt(gui, x, y);
             Slot slot = target == null ? inventoryTargets.at(gui, x, y) : null;
@@ -219,7 +225,7 @@ public final class NeiTouchMenu {
             sizeMenu();
             return;
         }
-        if (action == 5 && (inventorySelection == null || !inventorySelection.canSplit())) return;
+        if (!enabled(row)) return;
         ContainerItemTarget.Selection selectedSlot = inventorySelection;
         ItemStack selected = stack;
         GuiContainer source = screen;
@@ -230,10 +236,13 @@ public final class NeiTouchMenu {
         else if (action == 3) bookmark.invoke(null, selected, false, false);
         else if (action == 4) NeiFavoriteTreeShortcut.openFavorite(source);
         else if (action == 5) selectedSlot.split(source);
+        else if (action == 8) selectedSlot.collect(source);
     }
 
     private boolean enabled(int row) {
-        return actions[row] != 5 || inventorySelection != null && inventorySelection.canSplit();
+        if (actions[row] == 5) return inventorySelection != null && inventorySelection.canSplit();
+        if (actions[row] == 8) return inventorySelection != null && inventorySelection.canCollect();
+        return true;
     }
 
     private String label(int row) { return I18n.format("easytouch.neiMenu." + actions[row]); }
