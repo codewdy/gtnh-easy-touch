@@ -43,3 +43,5 @@ easytouch.craftTree.quantityHint=上方为精确目标的库存差额；实际�
 
 easytouch.craftTree.buttonTryCraft=尝试合成
 easytouch.craftTree.tryCraftHint=跳过可合成性预检，让 NEI 尝试执行当前合成树；不保证循环配方能完成。
+
+easytouch.key.worldUsage=查看准星方块的 NEI 用途

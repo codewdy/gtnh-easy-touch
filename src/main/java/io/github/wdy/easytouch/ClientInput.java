@@ -72,6 +72,7 @@ public final class ClientInput {
         try {
             io.github.wdy.easytouch.nei.NeiTouchMenu.install();
             NeiCraftingTreeInput.install();
+            io.github.wdy.easytouch.nei.WorldUsageHotkey.install();
         } catch (RuntimeException | LinkageError error) {
             // Loading the optional adapter itself can fail before its install() body is entered.
             FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] Cannot load NEI crafting tree controls.");

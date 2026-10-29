@@ -43,3 +43,5 @@ easytouch.craftTree.quantityHint=The label shows the target shortfall; crafting 
 
 easytouch.craftTree.buttonTryCraft=Try Craft
 easytouch.craftTree.tryCraftHint=Skip the feasibility check and let NEI try this tree; cyclic recipes may still not complete.
+
+easytouch.key.worldUsage=Show NEI usages of targeted block
