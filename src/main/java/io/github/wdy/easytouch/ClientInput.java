@@ -61,6 +61,7 @@ public final class ClientInput {
 
     public static void install(TouchConfig config) {
         ClientInput client = new ClientInput(config);
+        io.github.wdy.easytouch.guide.WorldGuideHotkey.install();
         io.github.wdy.easytouch.touch.ModularUiTouchInput.install();
         MinecraftForge.EVENT_BUS.register(client);
         FMLCommonHandler.instance().bus().register(client);
