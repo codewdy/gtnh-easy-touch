@@ -39,3 +39,9 @@ easytouch.craftTree.tryCraftHint=Skip the feasibility check and let NEI try this
 easytouch.key.worldUsage=Show NEI usages of targeted block
 
 easytouch.neiMenu.8=Collect
+
+easytouch.split.quantity=Take: %s / %s
+easytouch.neiMenu.11=Confirm pickup
+easytouch.neiMenu.12=Cancel
+easytouch.split.stopped=Pickup stopped; cursor holds %s / %s items. Check storage or connection before retrying.
+easytouch.split.progress=Taking %s / %s; click again to stop

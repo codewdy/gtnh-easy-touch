@@ -39,3 +39,9 @@ easytouch.craftTree.tryCraftHint=跳过可合成性预检，让 NEI 尝试执行
 easytouch.key.worldUsage=查看准星方块的 NEI 用途
 
 easytouch.neiMenu.8=收集
+
+easytouch.split.quantity=拿取数量：%s / %s
+easytouch.neiMenu.11=确认拿取
+easytouch.neiMenu.12=取消
+easytouch.split.stopped=取物已停止，鼠标持有 %s / %s 个。请检查库存或网络后重试。
+easytouch.split.progress=正在拿取 %s / %s；再次点击可停止

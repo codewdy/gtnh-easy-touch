@@ -42,7 +42,10 @@ final class ContainerItemTarget {
         boolean canSplit() {
             Minecraft mc = Minecraft.getMinecraft();
             return mc.thePlayer != null && mc.thePlayer.inventory.getItemStack() == null
-                && slot.getHasStack() && slot.getStack().stackSize > 1 && slot.canTakeStack(mc.thePlayer);
+                && slot.getHasStack() && slot.getStack().stackSize > 1 && slot.canTakeStack(mc.thePlayer)
+                && slot.isItemValid(slot.getStack()) && slot.getStack().stackSize <= slot.getStack().getMaxStackSize()
+                && slot.getStack().stackSize <= slot.getSlotStackLimit()
+                && !slot.getClass().getSimpleName().toLowerCase(java.util.Locale.ROOT).matches(".*(fake|ghost|dummy|craft|output).*");
         }
 
         boolean canCollect() {
@@ -68,10 +71,28 @@ final class ContainerItemTarget {
             manager.handleMouseClick(slot, slot.slotNumber, 0, 6);
         }
 
-        void split(GuiContainer gui) {
-            if (matches(gui, slot) && canSplit()) {
-                // Ordinary right-click pickup, without shift or local stack manipulation.
-                GuiContainerManager.getManager(gui).handleMouseClick(slot, slot.slotNumber, 1, 0);
+        void split(GuiContainer gui, int quantity) {
+            Minecraft mc = Minecraft.getMinecraft();
+            if (mc.currentScreen != gui || !matches(gui, slot) || !canSplit()) return;
+            ItemStack original = slot.getStack().copy();
+            if (quantity < 1 || quantity > original.stackSize) return;
+            GuiContainerManager manager = GuiContainerManager.getManager(gui);
+            if (manager == null) return;
+            manager.handleMouseClick(slot, slot.slotNumber, 0, 0);
+            for (int remaining = original.stackSize; remaining > quantity; remaining--) {
+                ItemStack hand = mc.thePlayer.inventory.getItemStack();
+                ItemStack expected = original.copy();
+                expected.stackSize = remaining;
+                ItemStack returned = slot.getStack();
+                int deposited = original.stackSize - remaining;
+                ItemStack expectedSlot = original.copy();
+                expectedSlot.stackSize = deposited;
+                // Stop immediately when a custom click handler does not follow ordinary slot semantics.
+                if (mc.currentScreen != gui || !matches(gui, slot)
+                    || !ItemStack.areItemStacksEqual(hand, expected)
+                    || !ItemStack.areItemStacksEqual(returned, deposited == 0 ? null : expectedSlot)
+                    || !slot.isItemValid(original)) return;
+                manager.handleMouseClick(slot, slot.slotNumber, 1, 0);
             }
         }
     }

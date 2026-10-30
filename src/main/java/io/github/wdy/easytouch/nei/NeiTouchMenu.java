@@ -33,12 +33,19 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.GL11;
 
 /** Captures panel contacts before GUI mouse injection; ordinary mouse input stays native. */
-public final class NeiTouchMenu {
+public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInputHandler {
+    private boolean mouseSliding;
     private static final int ROW = 22;
     private static final int[] PANEL_ACTIONS = {1, 2, 3, 4};
     private static final int[] RECIPE_ACTIONS = {1, 2, 3};
     private static final int[] INVENTORY_ACTIONS = {0, 5, 8, 6};
     private static final int[] INVENTORY_NEI_ACTIONS = {1, 2, 3, 4, 7};
+    private static final int[] QUANTITY_ACTIONS = {9, 10, 11, 12};
+    private int quantity, maximum;
+    private AeItemTarget aeTargets;
+    private AeItemTarget.Selection aeSelection, pendingAe;
+    private int requested, received, awaiting;
+    private long deadline;
     private int[] actions = PANEL_ACTIONS;
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Map<String, Integer> contacts = new HashMap<>();
@@ -63,6 +70,10 @@ public final class NeiTouchMenu {
         bookmark.setAccessible(true);
         recipeTargets = new NeiRecipeTouchTarget();
         inventoryTargets = new ContainerItemTarget();
+        try { aeTargets = new AeItemTarget(); }
+        catch (ReflectiveOperationException | LinkageError error) {
+            FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] AE quantity pickup unavailable.");
+        }
         gesture = new ItemTouchGesture(new ItemTouchGesture.Port() {
             public void hover(float x, float y) { new GuiTouchMouse(mc).move(x, y); }
             public void drag(TouchSample sample) { TouchInput.dragGuiTouch(sample); }
@@ -86,6 +97,7 @@ public final class NeiTouchMenu {
             });
             MinecraftForge.EVENT_BUS.register(search);
             FMLCommonHandler.instance().bus().register(search);
+            codechicken.nei.guihook.GuiContainerManager.addInputHandler(menu);
             MinecraftForge.EVENT_BUS.register(menu);
             FMLCommonHandler.instance().bus().register(menu);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
@@ -105,13 +117,21 @@ public final class NeiTouchMenu {
     }
 
     private boolean accept(TouchSample sample) {
-        if (sample.kind == TouchSample.Kind.RESET) { close(); contacts.clear(); return false; }
+        if (sample.kind == TouchSample.Kind.RESET) { pendingAe = null; close(); contacts.clear(); return false; }
         if (sample.simulated() || !sample.valid()) return false;
         String id = sample.deviceId + ":" + sample.fingerId;
         try {
             if (screen != null && (mc.currentScreen != screen || !Display.isActive())) close();
+            if (pendingAe != null && sample.kind == TouchSample.Kind.DOWN) {
+                pendingAe = null;
+                contacts.put(id, -1);
+                return true;
+            }
             Integer captured = contacts.get(id);
             if (captured != null) {
+                if (captured == 10 && screen != null && actions == QUANTITY_ACTIONS) {
+                    if (sample.kind != TouchSample.Kind.CANCEL) slide((int) (sample.x * screen.width));
+                }
                 if (id.equals(holdContact)) {
                     if (!gesture.dragging() && !targetCurrent()) close();
                     else gesture.accept(sample);
@@ -138,6 +158,7 @@ public final class NeiTouchMenu {
                     int row = hit(x, y);
                     contacts.put(id, row < 0 ? -1 : actions[row]);
                     if (menuOpen && row < 0) close();
+                    else if (row >= 0 && actions[row] == 10) slide(x);
                 }
                 return true;
             }
@@ -146,17 +167,20 @@ public final class NeiTouchMenu {
             Widget target = panelAt(x, y);
             if (target == null) target = recipeTargets.widgetAt(gui, x, y);
             Slot slot = target == null ? inventoryTargets.at(gui, x, y) : null;
+            AeItemTarget.Selection ae = target == null && slot == null && aeTargets != null
+                ? aeTargets.at(gui, x, y) : null;
             // Preserve normal placement/distribution while the cursor already carries a stack.
-            if (slot != null && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
-            ItemStack item = target != null ? target.getStackMouseOver(x, y) : slot != null ? slot.getStack() : null;
+            if ((slot != null || ae != null) && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
+            ItemStack item = target != null ? target.getStackMouseOver(x, y) : slot != null ? slot.getStack() : ae != null ? ae.item : null;
             if (item == null || ItemPanels.bookmarkPanel.inEditingState()
                     || ItemPanels.itemPanel.draggedStack != null) return false;
             screen = gui;
             panel = target;
             recipeSelection = target instanceof RecipeWidget
                 ? new NeiRecipeTouchTarget.Selection((RecipeWidget) target, x, y) : null;
+            aeSelection = ae;
             inventorySelection = slot == null ? null : new ContainerItemTarget.Selection(gui, slot);
-            actions = inventorySelection != null ? INVENTORY_ACTIONS
+            actions = inventorySelection != null || aeSelection != null ? INVENTORY_ACTIONS
                 : recipeSelection == null ? PANEL_ACTIONS : RECIPE_ACTIONS;
             menuOpen = false;
             holdContact = id;
@@ -174,7 +198,7 @@ public final class NeiTouchMenu {
     }
 
     private void sizeMenu() {
-        width = 64;
+        width = actions == QUANTITY_ACTIONS ? Math.min(180, screen.width - 4) : 64;
         for (int i = 0; i < actions.length; i++) width = Math.max(width, mc.fontRenderer.getStringWidth(label(i)) + 20);
         left = Math.max(0, Math.min(itemX, screen.width - width));
         top = Math.max(0, Math.min(itemY, screen.height - ROW * actions.length));
@@ -182,6 +206,8 @@ public final class NeiTouchMenu {
 
     private boolean targetCurrent() throws ReflectiveOperationException {
         if (screen == null || mc.currentScreen != screen || !Display.isActive()) return false;
+        if (aeSelection != null) return aeSelection.current()
+            && mc.thePlayer.inventory.getItemStack() == null;
         if (inventorySelection != null) {
             Slot current = inventoryTargets.at(screen, itemX, itemY);
             return inventorySelection.matches(screen, current) && mc.thePlayer != null
@@ -199,7 +225,15 @@ public final class NeiTouchMenu {
 
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || screen == null) return;
+        if (event.phase != TickEvent.Phase.END) return;
+        if (pendingAe != null) {
+            try { tickAe(); }
+            catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
+                pendingAe = null;
+                FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] AE pickup stopped.");
+            }
+        }
+        if (screen == null) return;
         try {
             if (mc.currentScreen != screen || !Display.isActive()) close();
             else if (!gesture.dragging()) {
@@ -226,6 +260,24 @@ public final class NeiTouchMenu {
             return;
         }
         if (!enabled(row)) return;
+        if (action == 5) {
+            maximum = aeSelection != null ? aeSelection.maximum : inventorySelection.slot.getStack().stackSize;
+            quantity = Math.max(1, (maximum + 1) / 2);
+            actions = QUANTITY_ACTIONS;
+            sizeMenu();
+            return;
+        }
+        if (action == 9 || action == 10) return;
+        if (action == 12) { close(); return; }
+        if (action == 11) {
+            if (aeSelection != null) {
+                pendingAe = aeSelection;
+                requested = quantity; received = 0; awaiting = 0;
+                deadline = System.currentTimeMillis() + 3000;
+            } else if (inventorySelection != null) inventorySelection.split(screen, quantity);
+            close();
+            return;
+        }
         ContainerItemTarget.Selection selectedSlot = inventorySelection;
         ItemStack selected = stack;
         GuiContainer source = screen;
@@ -235,28 +287,91 @@ public final class NeiTouchMenu {
         else if (action == 2) GuiUsageRecipe.openRecipeGui("item", selected);
         else if (action == 3) bookmark.invoke(null, selected, false, false);
         else if (action == 4) NeiFavoriteTreeShortcut.openFavorite(source);
-        else if (action == 5) selectedSlot.split(source);
         else if (action == 8) selectedSlot.collect(source);
     }
 
     private boolean enabled(int row) {
-        if (actions[row] == 5) return inventorySelection != null && inventorySelection.canSplit();
+        if (actions[row] == 5) return aeSelection != null || inventorySelection != null && inventorySelection.canSplit();
         if (actions[row] == 8) return inventorySelection != null && inventorySelection.canCollect();
         return true;
     }
 
-    private String label(int row) { return I18n.format("easytouch.neiMenu." + actions[row]); }
+    private String label(int row) {
+        if (actions[row] == 9) return I18n.format("easytouch.split.quantity", quantity, maximum);
+        if (actions[row] == 10) return "";
+        return I18n.format("easytouch.neiMenu." + actions[row]);
+    }
+
+    private void slide(int x) {
+        int span = Math.max(1, width - 24);
+        quantity = 1 + Math.round(Math.max(0, Math.min(span, x - left - 12)) * (maximum - 1f) / span);
+    }
+
+    private void tickAe() throws ReflectiveOperationException {
+        if (!pendingAe.current() || !Display.isActive()) { pendingAe = null; return; }
+        ItemStack hand = mc.thePlayer.inventory.getItemStack();
+        int count = hand == null ? 0 : hand.stackSize;
+        if (hand != null && (!hand.isItemEqual(pendingAe.item)
+            || !ItemStack.areItemStackTagsEqual(hand, pendingAe.item))) { pendingAe = null; return; }
+        if (awaiting != 0) {
+            if (count == awaiting) { received = count; awaiting = 0; }
+            else if (count != received || System.currentTimeMillis() >= deadline) {
+                mc.thePlayer.addChatMessage(new net.minecraft.util.ChatComponentText(
+                    I18n.format("easytouch.split.stopped", count, requested)));
+                pendingAe = null;
+                return;
+            } else return;
+        } else if (count != received) { pendingAe = null; return; }
+        if (received >= requested) { pendingAe = null; return; }
+        pendingAe.takeOne();
+        awaiting = received + 1;
+        deadline = System.currentTimeMillis() + 3000;
+    }
     private void close() {
         gesture.cancel();
         screen = null; stack = null; panel = null; recipeSelection = null; inventorySelection = null;
-        holdContact = null; menuOpen = false;
+        holdContact = null; menuOpen = false; aeSelection = null; mouseSliding = false;
     }
 
+    @Override public boolean mouseClicked(GuiContainer gui, int x, int y, int button) {
+        if (pendingAe != null) { pendingAe = null; return true; }
+        if (gui != screen || !menuOpen) return false;
+        try {
+            int row = hit(x, y);
+            if (button != 0 || row < 0) close();
+            else if (actions[row] == 10) { mouseSliding = true; slide(x); }
+            else select(row);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError error) { fail(error); }
+        return true;
+    }
+    @Override public void onMouseDragged(GuiContainer gui, int x, int y, int button, long time) {
+        if (mouseSliding && gui == screen) slide(x);
+    }
+    @Override public void onMouseUp(GuiContainer gui, int x, int y, int button) { mouseSliding = false; }
+    @Override public boolean mouseScrolled(GuiContainer gui, int x, int y, int scroll) {
+        if (gui != screen || !menuOpen) return false;
+        if (actions == QUANTITY_ACTIONS) quantity = Math.max(1, Math.min(maximum, quantity + Integer.signum(scroll)));
+        return true;
+    }
+    @Override public boolean keyTyped(GuiContainer gui, char c, int key) {
+        pendingAe = null;
+        if (gui != screen || !menuOpen) return false;
+        close();
+        return true;
+    }
+    @Override public void onKeyTyped(GuiContainer gui, char c, int key) { pendingAe = null; }
+    @Override public boolean lastKeyTyped(GuiContainer gui, char c, int key) { return false; }
+    @Override public void onMouseClicked(GuiContainer gui, int x, int y, int button) { }
+    @Override public void onMouseScrolled(GuiContainer gui, int x, int y, int scroll) { pendingAe = null; }
+
     @SubscribeEvent
-    public void gui(GuiOpenEvent event) { close(); }
+    public void gui(GuiOpenEvent event) { pendingAe = null; close(); }
 
     @SubscribeEvent
     public void draw(GuiScreenEvent.DrawScreenEvent.Post event) {
+        if (pendingAe != null && event.gui == pendingAe.gui && Display.isActive()) {
+            mc.fontRenderer.drawStringWithShadow(I18n.format("easytouch.split.progress", received, requested), 8, 8, 0xffffff);
+        }
         if (!menuOpen || stack == null || event.gui != screen || !Display.isActive()) return;
         GL11.glPushMatrix();
         GL11.glTranslatef(0, 0, 500);
@@ -267,6 +382,12 @@ public final class NeiTouchMenu {
                 int y = top + i * ROW;
                 Gui.drawRect(left, y, left + width, y + ROW, 0xf0202020);
                 if (i > 0) Gui.drawRect(left + 4, y, left + width - 4, y + 1, 0xff555555);
+                if (actions[i] == 10) {
+                    int knob = left + 12 + (maximum <= 1 ? 0 : Math.round((width - 24f) * (quantity - 1) / (maximum - 1)));
+                    Gui.drawRect(left + 12, y + 9, left + width - 12, y + 13, 0xff777777);
+                    Gui.drawRect(left + 12, y + 9, knob, y + 13, 0xff55bbff);
+                    Gui.drawRect(knob - 4, y + 3, knob + 5, y + ROW - 3, 0xffeeeeee);
+                }
                 mc.fontRenderer.drawStringWithShadow(label(i), left + 10, y + (ROW - 8) / 2, enabled(i) ? 0xffffff : 0x777777);
             }
         } finally {
