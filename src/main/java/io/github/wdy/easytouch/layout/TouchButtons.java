@@ -66,6 +66,7 @@ public final class TouchButtons {
             if (item == 1) config.toggleButtons();
             else if (item == 2 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
             else if (item == 3) config.toggleAutoStep();
+            else if (item == 4) config.toggleOptimizeTooltip();
             else if (item == GlobalTouchMenu.TOUCHPAD) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
@@ -179,7 +180,8 @@ public final class TouchButtons {
     private String[] menuLabels() {
         return new String[]{config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
             mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射",
-            "自动上台阶：" + (config.autoStep ? "开启" : "关闭")};
+            "自动上台阶：" + (config.autoStep ? "开启" : "关闭"),
+            "优化tooltip：" + (config.optimizeTooltip ? "开启" : "关闭")};
     }
     private int textWidth(String label) { return (int)Math.ceil(mc.fontRenderer.getStringWidth(label)*.8f); }
     private int fittedMenuWidth(int textWidth, int screenWidth) {

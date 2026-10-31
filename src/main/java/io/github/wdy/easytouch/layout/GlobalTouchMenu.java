@@ -8,7 +8,7 @@ import io.github.wdy.easytouch.touch.TouchSample;
 /** Captures complete contacts, including outside-dismiss taps, before underlying controls. */
 public final class GlobalTouchMenu {
     public static final int SIZE = 24, MARGIN = 6, ROW = 22;
-    public static final int ROWS = 3, TOUCHPAD = ROWS + 1;
+    public static final int ROWS = 4, TOUCHPAD = ROWS + 1;
     private final Map<String, Integer> contacts = new HashMap<String, Integer>();
     private final Runnable opened;
     private final IntConsumer action;

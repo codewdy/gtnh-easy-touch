@@ -38,7 +38,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     private static final int ROW = 22;
     private static final int[] PANEL_ACTIONS = {1, 2, 3, 4};
     private static final int[] RECIPE_ACTIONS = {1, 2, 3};
-    private static final int[] INVENTORY_ACTIONS = {0, 5, 8, 6};
+    private static final int[] INVENTORY_ACTIONS = {5, 8, 6};
     private static final int[] INVENTORY_NEI_ACTIONS = {1, 2, 3, 4, 7};
     private static final int[] QUANTITY_ACTIONS = {9, 10, 11, 12};
     private int quantity, maximum;
@@ -78,7 +78,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             public void hover(float x, float y) { new GuiTouchMouse(mc).move(x, y); }
             public void drag(TouchSample sample) { TouchInput.dragGuiTouch(sample); }
             public void cancelDrag() { TouchInput.cancelGuiTouch(); }
-            public void menu() { menuOpen = true; }
+            public void menu() {
+                menuOpen = true; sizeMenu();
+            }
             public void tap(TouchSample down, TouchSample up) {
                 TouchInput.dragGuiTouch(down);
                 TouchInput.dragGuiTouch(up);
@@ -89,6 +91,11 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     public static void install() {
         try {
             NeiTouchMenu menu = new NeiTouchMenu();
+            DockedTooltips.setMenuPriority(sample -> {
+                String id = sample.deviceId + ":" + sample.fingerId;
+                return menu.contacts.containsKey(id) || menu.screen != null
+                    && menu.hit((int) (sample.x * menu.screen.width), (int) (sample.y * menu.screen.height)) >= 0;
+            });
             NeiSearchTouch search = new NeiSearchTouch();
             TouchInput.setGuiInterceptor(sample -> {
                 boolean consumed = menu.accept(sample);
@@ -200,8 +207,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     private void sizeMenu() {
         width = actions == QUANTITY_ACTIONS ? Math.min(180, screen.width - 4) : 64;
         for (int i = 0; i < actions.length; i++) width = Math.max(width, mc.fontRenderer.getStringWidth(label(i)) + 20);
-        left = Math.max(0, Math.min(itemX, screen.width - width));
-        top = Math.max(0, Math.min(itemY, screen.height - ROW * actions.length));
+        width = Math.min(width, screen.width - 8);
+        left = Math.max(4, Math.min(itemX, screen.width - width - 4));
+        top = Math.max(4, Math.min(itemY, screen.height - ROW * actions.length - 4));
     }
 
     private boolean targetCurrent() throws ReflectiveOperationException {
@@ -356,6 +364,8 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     @Override public boolean keyTyped(GuiContainer gui, char c, int key) {
         pendingAe = null;
         if (gui != screen || !menuOpen) return false;
+        // Leave native tooltip paging/modifier keys and NEI shortcuts available.
+        if (key != org.lwjgl.input.Keyboard.KEY_ESCAPE) return false;
         close();
         return true;
     }

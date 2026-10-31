@@ -12,6 +12,14 @@ public final class EasyTouch {
     public static final String ID = "gtnheasytouch";
     private TouchConfig config;
 
+    public EasyTouch() {
+        // Chromatic registers HIGHEST in preInit. Register before all preInit handlers
+        // so its queued native draw can be adapted without reordering other mods.
+        if (cpw.mods.fml.common.FMLCommonHandler.instance().getSide().isClient()) {
+            io.github.wdy.easytouch.touch.TooltipRenderPhase.registerEarly();
+        }
+    }
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         if (event.getSide().isClient()) {

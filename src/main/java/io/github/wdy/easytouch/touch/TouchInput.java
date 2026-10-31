@@ -30,6 +30,7 @@ import static org.lwjgl.sdl.SDLInit.SDL_WasInit;
 public final class TouchInput {
     private static TouchInput installed;
     private static java.util.function.Predicate<TouchSample> guiInterceptor;
+    private static java.util.function.Predicate<TouchSample> tooltipInterceptor;
 
     public static void setGuiInterceptor(java.util.function.Predicate<TouchSample> interceptor) {
         guiInterceptor = interceptor;
@@ -75,6 +76,10 @@ public final class TouchInput {
     public static void install(TouchConfig config) {
         final TouchInput input = new TouchInput(config);
         installed = input;
+        if (cpw.mods.fml.common.Loader.isModLoaded("NotEnoughItems")) {
+            io.github.wdy.easytouch.nei.DockedTooltips.install(config);
+            tooltipInterceptor = io.github.wdy.easytouch.nei.DockedTooltips::acceptTouch;
+        }
         MinecraftForge.EVENT_BUS.register(input);
         FMLCommonHandler.instance().bus().register(input);
         ClientCommandHandler.instance.registerCommand(new CommandBase() {
@@ -190,6 +195,8 @@ public final class TouchInput {
             if (!active) continue;
             TouchInputEvent forwarded = new TouchInputEvent(sample);
             forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
+            if (tooltipInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET))
+                forwarded.consumed |= tooltipInterceptor.test(sample);
             if (guiInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)) {
                 forwarded.consumed |= guiInterceptor.test(sample);
             }

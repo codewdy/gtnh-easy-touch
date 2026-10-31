@@ -9,6 +9,7 @@ public final class TouchConfig {
     public final File layoutFile;
     public boolean buttonsVisible;
     public boolean autoStep;
+    public boolean optimizeTooltip;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
     public final float touchDragSensitivity;
@@ -18,6 +19,9 @@ public final class TouchConfig {
         layoutFile = new File(path.getParentFile(), "gtnheasytouch-layout.json");
         file = new Configuration(path);
         file.load();
+        file.getCategory("touch").remove("hideTooltips");
+        optimizeTooltip = file.getBoolean("optimizeTooltip", "touch", true,
+            "Dock native tooltips in the lower half of the NEI right column and enable touch scrolling.");
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
         autoStep = file.getBoolean("autoStep", "movement", false,
             "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");
@@ -43,6 +47,12 @@ public final class TouchConfig {
     public void toggleButtons() {
         buttonsVisible = !buttonsVisible;
         file.get("touch", "showButtons", true).set(buttonsVisible);
+        file.save();
+    }
+
+    public void toggleOptimizeTooltip() {
+        optimizeTooltip = !optimizeTooltip;
+        file.get("touch", "optimizeTooltip", true).set(optimizeTooltip);
         file.save();
     }
 
