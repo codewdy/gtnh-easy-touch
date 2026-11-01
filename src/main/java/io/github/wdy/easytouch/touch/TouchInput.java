@@ -171,6 +171,8 @@ public final class TouchInput {
         }
         dispatchPending();
         if (!active) return;
+        if (Display.isActive()) mapTouch.tick(nanoTime());
+        else mapTouch.reset();
         guiMouse.tick(nanoTime());
         io.github.wdy.easytouch.layout.TouchButtons.instance.tickMouse(nanoTime());
         io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouse();
