@@ -41,6 +41,14 @@ public final class TouchConfig {
         sensitivity = Math.max(0.1, Math.min(5.0, sensitivity));
         touchDragSensitivity = (float) sensitivity;
         dragSensitivity.set(sensitivity);
+        Property mapScale = file.get("map", "journeyMapIconScale", 2.0,
+            "JourneyMap 5.2 map icon multiplier, independent of GUI scale (1.0 = original size, 2.0 = twice the width and height). "
+                + "Applies to self, entities, waypoints, VisualProspecting ore icons/fluid labels and TCNodeTracker nodes on JourneyMap. Restart to apply.", 1.0, 8.0);
+        double mapMultiplier = mapScale.getDouble(2.0);
+        if (!Double.isFinite(mapMultiplier)) mapMultiplier = 2.0;
+        mapMultiplier = Math.max(1.0, Math.min(8.0, mapMultiplier));
+        mapScale.set(mapMultiplier);
+        io.github.wdy.easytouch.map.JourneyMapScale.configure(mapMultiplier);
         file.save();
     }
 

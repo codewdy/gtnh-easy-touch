@@ -3,7 +3,7 @@ plugins {
     id("com.gtnewhorizons.retrofuturagradle") version "2.0.6"
 }
 group = "io.github.wdy.easytouch"
-version = "0.5.0"
+version = "0.5.3"
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(8))
     withSourcesJar()
@@ -55,4 +55,9 @@ tasks.processResources {
     dependsOn(buildWindowsUia)
     inputs.property("version", project.version)
     filesMatching("mcmod.info") { expand("version" to project.version) }
+}
+
+tasks.jar {
+    manifest.attributes("FMLCorePlugin" to "io.github.wdy.easytouch.core.EasyTouchLoadingPlugin",
+        "FMLCorePluginContainsFMLMod" to "true")
 }

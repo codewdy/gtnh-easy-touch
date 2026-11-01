@@ -48,6 +48,7 @@ public final class TouchInput {
     private boolean openRequested;
     private final GuiTouchMouse guiMousePort;
     private final TouchMouse guiMouse;
+    private final io.github.wdy.easytouch.map.JourneyMapTouch mapTouch = new io.github.wdy.easytouch.map.JourneyMapTouch();
 
     private TouchInput(TouchConfig config) {
         this.config = config;
@@ -194,7 +195,8 @@ public final class TouchInput {
             tracker.accept(sample);
             if (!active) continue;
             TouchInputEvent forwarded = new TouchInputEvent(sample);
-            forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
+            forwarded.consumed = mapTouch.accept(sample);
+            if (!forwarded.consumed) forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
             if (tooltipInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET))
                 forwarded.consumed |= tooltipInterceptor.test(sample);
             if (guiInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)) {
@@ -212,6 +214,7 @@ public final class TouchInput {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void gui(GuiOpenEvent event) {
         // Drop queued GUI contacts before returning to gameplay (and vice versa).
+        mapTouch.reset();
         queue.reset();
         guiMouse.cancel();
         syncMouseButtons();
@@ -220,7 +223,8 @@ public final class TouchInput {
     @SubscribeEvent
     public void unload(WorldEvent.Unload event) {
         if (event.world.isRemote) {
-            queue.reset();
+            mapTouch.reset();
+        queue.reset();
             guiMouse.cancel();
             syncMouseButtons();
         }
