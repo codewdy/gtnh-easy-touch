@@ -37,6 +37,7 @@ public final class TouchButtons {
     private final Map<String, TouchLayout.Button> contacts = new HashMap<String, TouchLayout.Button>();
     private final Map<TouchLayout.Button, List<Integer>> held = new IdentityHashMap<TouchLayout.Button, List<Integer>>();
     public boolean openRequested;
+    private boolean configRequested;
     public String loadError;
 
     public TouchButtons(TouchConfig config, KeyStateMerger.Source source, Runnable resetInputs) {
@@ -65,8 +66,7 @@ public final class TouchButtons {
             reset.run();
             if (item == 1) config.toggleButtons();
             else if (item == 2 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
-            else if (item == 3) config.toggleAutoStep();
-            else if (item == 4) config.toggleOptimizeTooltip();
+            else if (item == 3 && !(mc.currentScreen instanceof FeatureConfigScreen)) configRequested = true;
             else if (item == GlobalTouchMenu.TOUCHPAD) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
@@ -180,8 +180,7 @@ public final class TouchButtons {
     private String[] menuLabels() {
         return new String[]{config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
             mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射",
-            "自动上台阶：" + (config.autoStep ? "开启" : "关闭"),
-            "优化tooltip：" + (config.optimizeTooltip ? "开启" : "关闭")};
+            "功能配置"};
     }
     private int textWidth(String label) { return (int)Math.ceil(mc.fontRenderer.getStringWidth(label)*.8f); }
     private int fittedMenuWidth(int textWidth, int screenWidth) {
@@ -282,6 +281,7 @@ public final class TouchButtons {
         if (!menuAvailable()) menu.reset();
         if (!available() || !config.buttonsVisible && !mouseControl.isOpen()) cancel();
         keyboard.mouseModifiers(Collections.emptySet());
+        if (configRequested) { configRequested = false; cancel(); mc.displayGuiScreen(new FeatureConfigScreen(config, mc.currentScreen)); }
         if (openRequested) { openRequested = false; cancel(); mc.displayGuiScreen(new LayoutEditor(this, mc.currentScreen)); }
     }
     @SubscribeEvent(priority = EventPriority.LOWEST) public void guiDraw(GuiScreenEvent.DrawScreenEvent.Post e) { draw(e.gui.width, e.gui.height); }

@@ -104,6 +104,12 @@ public final class ClientInput {
         io.github.wdy.easytouch.layout.TouchButtons.instance.syncKeyboard();
     }
 
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void beforeMouse(net.minecraftforge.client.event.MouseEvent event) {
+        if (config.autoTool && event.button == 0 && event.buttonstate && input.inWorld())
+            io.github.wdy.easytouch.input.AutoTool.select(input.mc);
+    }
+
     @SubscribeEvent
     public void syncMouse(InputEvent.MouseInputEvent event) {
         // Vanilla has already processed this real mouse event. Preserve any independent touch hold.
@@ -133,6 +139,9 @@ public final class ClientInput {
         if (!config.touchEnabled || input.mc.gameSettings.hideGUI) hotbar.cancel();
         if (event.phase == TickEvent.Phase.START) {
             touchLook.tick(TouchInput.nanoTime());
+            keys.sync(input.inWorld());
+            if (config.autoTool && input.inWorld() && input.mc.gameSettings.keyBindAttack.getIsKeyPressed())
+                io.github.wdy.easytouch.input.AutoTool.select(input.mc);
         }
         keys.sync(input.inWorld());
     }

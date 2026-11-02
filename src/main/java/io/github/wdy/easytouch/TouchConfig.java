@@ -9,6 +9,7 @@ public final class TouchConfig {
     public final File layoutFile;
     public boolean buttonsVisible;
     public boolean autoStep;
+    public boolean autoTool;
     public boolean optimizeTooltip;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
@@ -25,6 +26,8 @@ public final class TouchConfig {
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
         autoStep = file.getBoolean("autoStep", "movement", false,
             "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");
+        autoTool = file.getBoolean("autoTool", "mining", true,
+            "Automatically select a hotbar tool when mining. Prefer harvest capability, then mining speed.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
         touchLogEvents = file.getBoolean("logEvents", "touch", false,
@@ -61,6 +64,12 @@ public final class TouchConfig {
     public void toggleOptimizeTooltip() {
         optimizeTooltip = !optimizeTooltip;
         file.get("touch", "optimizeTooltip", true).set(optimizeTooltip);
+        file.save();
+    }
+
+    public void toggleAutoTool() {
+        autoTool = !autoTool;
+        file.get("mining", "autoTool", true).set(autoTool);
         file.save();
     }
 
