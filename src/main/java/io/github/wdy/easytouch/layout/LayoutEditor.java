@@ -12,6 +12,7 @@ public final class LayoutEditor extends GuiScreen {
     private final GuiScreen parent;
     private final TouchLayout draft;
     private int selected = -1, screen, option = -1, optionPage;
+    private final List<Integer> path = new ArrayList<Integer>();
     private int toolbarX = 4, toolbarY = 4;
     private boolean other, dragging, keypad;
     private boolean dispatchingButtons, rebuildRequested;
@@ -26,7 +27,8 @@ public final class LayoutEditor extends GuiScreen {
     private TouchLayout.Button rootButton() { return selected >= 0 && selected < draft.buttons.size() ? draft.buttons.get(selected) : null; }
     private TouchLayout.Button current() {
         TouchLayout.Button root = rootButton();
-        return root != null && option >= 0 ? root.options.get(option) : root;
+        for (int index : path) root = root.options.get(index);
+        return root;
     }
     private int optionRows() { return Math.max(1, (height - 100) / 26); }
     private void button(int id, int x, int y, int w, String text) { buttonList.add(new TextControlButton(id, x, y, w, text)); }
@@ -49,8 +51,8 @@ public final class LayoutEditor extends GuiScreen {
         if (screen == 1 && b != null) {
             name = new GuiTextField(fontRendererObj, x, y, 290, 20); name.setMaxStringLength(40); name.setText(b.label);
             button(10, x, y+26, 290, b.mode == 3 ? "配置子选项 (" + b.options.size() + ")" : "映射: " + target(b));
-            if (option >= 0) { button(34, x, y+50, 290, "删除此子选项"); return; }
-            button(11, x, y+50, 290, "触发: " + (b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
+            if (option >= 0) button(34, x, y+146, 290, "删除此子选项");
+            button(11, x, y+50, 290, "触发: " + (b.mode == 5 ? "旅行地图传送" : b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
             button(12, x, y+74, 142, "世界: " + (b.world ? "显示" : "隐藏"));
             button(13, x+148, y+74, 142, "其他: " + (b.other ? "显示" : "隐藏"));
             button(14, x, y+98, 142, "大小 -"); button(15, x+148, y+98, 142, "大小 + ("+b.size+")");
@@ -110,6 +112,7 @@ public final class LayoutEditor extends GuiScreen {
         return text.length() == 0 ? "未设置" : text.toString();
     }
     private String target(TouchLayout.Button b) {
+        if (b.mode == 5) return "旅行地图传送";
         if (b.mode == 3) return "菜单 (" + b.options.size() + " 项)";
         return !b.keys.isEmpty() ? chordLabel(b.keys) : b.binding.isEmpty() ? (b.key == 0 ? "未设置" : b.key < 0 ? "鼠标"+keyLabel(b.key)+"键" : Keyboard.getKeyName(b.key)) : I18n.format(b.binding);
     }
@@ -127,15 +130,15 @@ public final class LayoutEditor extends GuiScreen {
                 catch (IOException ex) { message = "保存失败: " + ex.getMessage(); }
                 return;
             case 7: mc.displayGuiScreen(parent); return;
-            case 10: if (b.mode == 3) { optionPage=0; screen=3; break; } selectedKeys.clear(); selectedKeys.addAll(owner.keys(b)); screen = 2; break;
-            case 11: b.mode = b.mode % 3 + 1; break;
+            case 10: if (b.mode == 5) break; if (b.mode == 3) { optionPage=0; screen=3; break; } selectedKeys.clear(); selectedKeys.addAll(owner.keys(b)); screen = 2; break;
+            case 11: b.mode = b.mode == 3 ? 5 : b.mode == 5 ? 1 : option >= 0 ? 3 : b.mode + 1; break;
             case 12: b.world = !b.world; break;
             case 13: b.other = !b.other; break;
             case 14: if (b != null) b.size = Math.max(24,b.size-4); break;
             case 15: if (b != null) b.size = Math.min(100,b.size+4); break;
             case 16: b.opacity = Math.max(10,b.opacity-5); break;
             case 17: b.opacity = Math.min(100,b.opacity+5); break;
-            case 18: screen = option >= 0 ? 3 : 0; option=-1; break;
+            case 18: screen = path.isEmpty() ? 0 : 3; if (!path.isEmpty()) path.remove(path.size()-1); option=path.isEmpty() ? -1 : path.get(path.size()-1); optionPage=0; break;
             case 20: keypad = !keypad; break;
             case 21: selectedKeys.clear(); break;
             case 22:
@@ -145,12 +148,12 @@ public final class LayoutEditor extends GuiScreen {
                 break;
             case 23: screen = 1; break;
             case 30: screen=1; break;
-            case 31: b.options.add(new TouchLayout.Button()); option=b.options.size()-1; screen=1; break;
+            case 31: b.options.add(new TouchLayout.Button()); option=b.options.size()-1; path.add(option); screen=1; break;
             case 32: optionPage=Math.max(0,optionPage-1); break;
             case 33: optionPage++; break;
-            case 34: rootButton().options.remove(option); option=-1; screen=3; break;
+            case 34: int removed=path.remove(path.size()-1); current().options.remove(removed); option=path.isEmpty() ? -1 : path.get(path.size()-1); optionPage=0; screen=3; break;
             default:
-                if (btn.id >= 2000 && screen == 3) { option=btn.id-2000; screen=1; }
+                if (btn.id >= 2000 && screen == 3) { option=btn.id-2000; path.add(option); screen=1; }
                 else if (btn.id >= 900 && screen == 2) {
 
                     Integer key=btn.id-1000;
@@ -210,7 +213,7 @@ public final class LayoutEditor extends GuiScreen {
     }
     @Override protected void mouseMovedOrUp(int x,int y,int button) { if (button == 0) dragging=false; super.mouseMovedOrUp(x,y,button); }
     @Override protected void keyTyped(char c,int key) {
-        if (key == Keyboard.KEY_ESCAPE) { captureName(); if (screen == 0) mc.displayGuiScreen(parent); else { screen=screen == 2 ? 1 : option >= 0 ? 3 : screen == 3 ? 1 : 0; if (screen == 3) option=-1; initGui(); } return; }
+        if (key == Keyboard.KEY_ESCAPE) { captureName(); if (screen == 0) mc.displayGuiScreen(parent); else { if (screen == 2 || screen == 3) screen=1; else { screen=path.isEmpty() ? 0 : 3; if (!path.isEmpty()) path.remove(path.size()-1); option=path.isEmpty() ? -1 : path.get(path.size()-1); optionPage=0; } initGui(); } return; }
         if (screen == 1 && current() != null) name.textboxKeyTyped(c,key);
     }
     @Override public void updateScreen() { if (screen == 1 && name != null) name.updateCursorCounter(); }

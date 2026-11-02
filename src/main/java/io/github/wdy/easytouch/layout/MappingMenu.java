@@ -38,7 +38,21 @@ public final class MappingMenu {
         if (y < 6) y=anchor+(button == null ? 0 : button.size)+4;
         return Math.max(6,Math.min(height-6-panelHeight,y));
     }
-    public void open(TouchLayout.Button value) { button=value; page=0; contacts.clear(); }
+    public void open(TouchLayout.Button value) { show(value, null); }
+    private void show(TouchLayout.Button value, TouchLayout.Button parent) {
+        TouchLayout.Button view = new TouchLayout.Button();
+        view.x=parent == null ? value.x : parent.x; view.y=parent == null ? value.y : parent.y; view.size=parent == null ? value.size : parent.size;
+        if (value.mode == 5) io.github.wdy.easytouch.map.TeleportTargets.populate(view);
+        else view.options.addAll(value.options);
+        if (parent != null) {
+            TouchLayout.Button back = new TouchLayout.Button();
+            back.label="‹ 返回上一级";
+            back.action=() -> { button=parent; page=0; };
+            view.options.add(0,back);
+        }
+        button=view; page=0;
+        contacts.replaceAll((key, hit) -> -1);
+    }
     public void reset() { button=null; contacts.clear(); }
     private int hit(int x, int y, int width, int height) {
         if (button == null || x < left(width) || x >= Math.min(width-6,left(width)+panelWidth)) return -1;
@@ -65,8 +79,13 @@ public final class MappingMenu {
                 if (sample.kind == TouchSample.Kind.UP && isOpen() && captured == hit) {
                     if (hit >= 0) {
                         TouchLayout.Button selected=button.options.get(hit);
-                        button=null;
-                        action.accept(selected);
+                        if (selected.mode == 3 || selected.mode == 5) show(selected, button);
+                        else {
+                            button=null;
+                            contacts.replaceAll((key, value) -> -1);
+                            if (selected.action != null) selected.action.run();
+                            else action.accept(selected);
+                        }
                     } else if (hit == -2 || hit == -3) {
                         page=Math.max(0,Math.min(pages(height)-1,page+(hit == -2 ? -1 : 1)));
                         // Contacts begun on the previous page cannot activate the next page.

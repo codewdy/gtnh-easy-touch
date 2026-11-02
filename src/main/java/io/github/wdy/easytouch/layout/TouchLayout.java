@@ -15,6 +15,7 @@ public final class TouchLayout {
     public float wheelX = -1, wheelY = -1, wheelScale = 1;
     public boolean wheelVisible = true;
     public static final class Button {
+        public transient Runnable action;
         public String label = "按键", binding = "";
         public int key = 0, mode = 1, size = 24, opacity = 30;
         public List<Integer> keys = new ArrayList<Integer>();
@@ -41,35 +42,29 @@ public final class TouchLayout {
             layout.buttons.removeAll(Collections.singleton(null));
             // Mouse control now belongs to the global menu, not a layout mapping.
             layout.buttons.removeIf(b -> b.mode == 4);
-            for (Button b : layout.buttons) {
-                migrate(b);
-                b.keys = ChordState.normalize(b.keys);
-                if (legacy && b.opacity == 55) b.opacity = 30;
-                b.x = clamp(b.x); b.y = clamp(b.y);
-                b.size = Math.max(24, Math.min(100, b.size));
-                b.opacity = Math.max(10, Math.min(100, b.opacity));
-                b.mode = b.mode == 2 || b.mode == 3 ? b.mode : 1;
-                if (b.options == null) b.options = new ArrayList<Button>();
-                b.options.removeAll(Collections.singleton(null));
-                for (Button option : b.options) {
-                    migrate(option);
-                    option.keys = ChordState.normalize(option.keys);
-                    if (!ChordState.valid(option.key)) option.key = 0;
-                    if (option.label == null) option.label = "按键";
-                    if (option.binding == null) option.binding = "";
-                    option.mode = 1;
-                    option.options = new ArrayList<Button>();
-                }
-                if (!ChordState.valid(b.key)) b.key = 0;
-                if (b.label == null) b.label = "按键";
-                if (b.binding == null) b.binding = "";
-            }
+            for (Button b : layout.buttons) normalize(b, legacy);
             layout.version = 8;
             layout.wheelScale = Float.isFinite(layout.wheelScale) ? Math.max(.5f, Math.min(2, layout.wheelScale)) : 1;
             layout.wheelX = layout.wheelX < 0 ? -1 : clamp(layout.wheelX);
             layout.wheelY = layout.wheelY < 0 ? -1 : clamp(layout.wheelY);
             return layout;
         } catch (RuntimeException ex) { throw new IOException("Invalid touch layout", ex); }
+    }
+    private static void normalize(Button b, boolean legacy) {
+        migrate(b);
+        b.keys = ChordState.normalize(b.keys);
+        if (legacy && b.opacity == 55) b.opacity = 30;
+        b.x = clamp(b.x); b.y = clamp(b.y);
+        b.size = Math.max(24, Math.min(100, b.size));
+        b.opacity = Math.max(10, Math.min(100, b.opacity));
+        b.mode = b.mode == 2 || b.mode == 3 || b.mode == 5 ? b.mode : 1;
+        if (!ChordState.valid(b.key)) b.key = 0;
+        if (b.label == null) b.label = "按键";
+        if (b.binding == null) b.binding = "";
+        if (b.options == null) b.options = new ArrayList<Button>();
+        b.options.removeAll(Collections.singleton(null));
+        b.options.removeIf(child -> child.mode == 4);
+        for (Button child : b.options) normalize(child, legacy);
     }
     private static void migrate(Button b) {
         if (!b.smartSecondary) return;
