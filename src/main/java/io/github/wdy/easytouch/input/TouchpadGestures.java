@@ -12,6 +12,8 @@ public final class TouchpadGestures {
         gesture=new ClickGesture(new ClickGesture.Port() {
             public void move(float x,float y,float dx,float dy) { port.move(dx,dy); }
             public void button(int b,boolean down) { port.button(b,down); }
+            public int tapButton() { return 0; }
+            public int holdButton() { return 1; }
         },true);
     }
     public boolean hasContacts() { return gesture.active(); }

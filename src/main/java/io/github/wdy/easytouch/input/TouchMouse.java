@@ -13,6 +13,8 @@ public final class TouchMouse {
         gesture=new ClickGesture(new ClickGesture.Port() {
             public void move(float x,float y,float dx,float dy) { port.move(x,y); }
             public void button(int b,boolean down) { port.button(b,down); }
+            public int tapButton() { return 0; }
+            public int holdButton() { return 1; }
         },false);
     }
     public boolean held() { return gesture.held(); }

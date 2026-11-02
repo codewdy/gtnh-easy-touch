@@ -50,7 +50,7 @@ public final class ClientInput {
                 input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
             }
             public void button(int button, boolean down) { actions.button(button, down); }
-            public boolean immediate() { return SwordAttack.immediate(input.mc); }
+            public boolean holdingSword() { return SwordAttack.holdingSword(input.mc); }
         });
     }
 

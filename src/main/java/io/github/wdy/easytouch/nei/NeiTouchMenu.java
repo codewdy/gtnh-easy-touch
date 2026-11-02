@@ -38,7 +38,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     private static final int ROW = 22;
     private static final int[] PANEL_ACTIONS = {1, 2, 3, 4};
     private static final int[] RECIPE_ACTIONS = {1, 2, 3};
-    private static final int[] INVENTORY_ACTIONS = {5, 8, 6};
+    private static final int[] INVENTORY_ACTIONS = {5, 6};
     private static final int[] INVENTORY_NEI_ACTIONS = {1, 2, 3, 4, 7};
     private static final int[] QUANTITY_ACTIONS = {9, 10, 11, 12};
     private int quantity, maximum;
@@ -286,7 +286,6 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             close();
             return;
         }
-        ContainerItemTarget.Selection selectedSlot = inventorySelection;
         ItemStack selected = stack;
         GuiContainer source = screen;
         new GuiTouchMouse(mc).move(touchX, touchY);
@@ -295,12 +294,10 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         else if (action == 2) GuiUsageRecipe.openRecipeGui("item", selected);
         else if (action == 3) bookmark.invoke(null, selected, false, false);
         else if (action == 4) NeiFavoriteTreeShortcut.openFavorite(source);
-        else if (action == 8) selectedSlot.collect(source);
     }
 
     private boolean enabled(int row) {
         if (actions[row] == 5) return aeSelection != null || inventorySelection != null && inventorySelection.canSplit();
-        if (actions[row] == 8) return inventorySelection != null && inventorySelection.canCollect();
         return true;
     }
 

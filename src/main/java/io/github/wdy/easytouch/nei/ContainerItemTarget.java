@@ -48,29 +48,6 @@ final class ContainerItemTarget {
                 && !slot.getClass().getSimpleName().toLowerCase(java.util.Locale.ROOT).matches(".*(fake|ghost|dummy|craft|output).*");
         }
 
-        boolean canCollect() {
-            Minecraft mc = Minecraft.getMinecraft();
-            return mc.thePlayer != null && mc.thePlayer.inventory.getItemStack() == null
-                && slot.getHasStack() && slot.getStack().getMaxStackSize() > 1
-                && slot.canTakeStack(mc.thePlayer) && container.func_94530_a(null, slot);
-        }
-
-        void collect(GuiContainer gui) {
-            Minecraft mc = Minecraft.getMinecraft();
-            if (mc.currentScreen != gui || !matches(gui, slot) || !canCollect()) return;
-            ItemStack selected = slot.getStack().copy();
-            GuiContainerManager manager = GuiContainerManager.getManager(gui);
-            if (manager == null) return;
-            // Match ordinary left pickup followed by vanilla double-click collection.
-            // The container owns matching, slot permissions, stack limits and server synchronization.
-            manager.handleMouseClick(slot, slot.slotNumber, 0, 0);
-            ItemStack carried = mc.thePlayer.inventory.getItemStack();
-            if (mc.currentScreen != gui || !matches(gui, slot) || carried == null
-                    || !carried.isItemEqual(selected) || !ItemStack.areItemStackTagsEqual(carried, selected)
-                    || carried.stackSize >= carried.getMaxStackSize()) return;
-            manager.handleMouseClick(slot, slot.slotNumber, 0, 6);
-        }
-
         void split(GuiContainer gui, int quantity) {
             Minecraft mc = Minecraft.getMinecraft();
             if (mc.currentScreen != gui || !matches(gui, slot) || !canSplit()) return;

@@ -37,7 +37,6 @@ easytouch.craftTree.tryCraftHint=Skip the feasibility check and let NEI try this
 
 easytouch.key.worldUsage=Show NEI usages of targeted block
 
-easytouch.neiMenu.8=Collect
 
 easytouch.split.quantity=Take: %s / %s
 easytouch.neiMenu.11=Confirm pickup

@@ -7,15 +7,16 @@ public final class ClickGesture {
     public interface Port {
         void move(float x, float y, float dx, float dy);
         void button(int button, boolean down);
-        default boolean immediate() { return false; }
+        default int tapButton() { return -1; }
+        default int holdButton() { return 0; }
     }
     public static final long DOUBLE_NS = 250_000_000L;
     private final Port port;
     private final boolean relative;
     private TouchSample down, pending;
-    private int width = 1, height = 1, button;
+    private int width = 1, height = 1, button, tapButton;
     private float x, y;
-    private boolean held, moved, immediate;
+    private boolean held, moved;
 
     public ClickGesture(Port port, boolean relative) { this.port = port; this.relative = relative; }
     public boolean held() { return held; }
@@ -35,10 +36,13 @@ public final class ClickGesture {
             port.button(0,true); port.button(0,false);
         }
     }
-    public void cancel() { release(); down = pending = null; moved = immediate = false; }
+    public void cancel() { release(); down = pending = null; moved = false; }
     public void tick(long now) {
         if (pending != null && now-pending.timestamp >= DOUBLE_NS) flush();
-        if (down != null && !held && !moved && now-down.timestamp >= TouchTiming.HOLD_NS) press();
+        if (down != null && !held && !moved && now-down.timestamp >= TouchTiming.HOLD_NS) {
+            button = port.holdButton();
+            press();
+        }
     }
     public void accept(TouchSample s, int w, int h) {
         if (s.kind == TouchSample.Kind.RESET) { cancel(); return; }
@@ -50,9 +54,8 @@ public final class ClickGesture {
             boolean twice = pending != null && s.deviceId == pending.deviceId && near(s,pending);
             if (!twice) flush(); else pending = null;
             down = s; x = s.x; y = s.y; moved = false; button = twice ? 1 : 0;
-            immediate = port.immediate();
+            tapButton = port.tapButton();
             if (!relative) port.move(x,y,0,0);
-            if (immediate) { button = 0; port.button(0,true); port.button(0,false); }
             return;
         }
         if (down == null || s.deviceId != down.deviceId || s.fingerId != down.fingerId) return;
@@ -66,8 +69,9 @@ public final class ClickGesture {
         if (moved) port.move(s.x,s.y,s.x-x,s.y-y);
         x = s.x; y = s.y;
         if (s.kind == TouchSample.Kind.UP) {
-            if (!held && !moved && !immediate) {
-                if (button == 1) { port.button(1,true); port.button(1,false); }
+            if (!held && !moved) {
+                if (tapButton >= 0) { port.button(tapButton,true); port.button(tapButton,false); }
+                else if (button == 1) { port.button(1,true); port.button(1,false); }
                 else pending = s;
             }
             release(); down = null;
