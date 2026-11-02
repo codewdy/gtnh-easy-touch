@@ -77,6 +77,15 @@ final class ChromaticTooltipBridge {
         if (failure != null) throw failure;
     }
 
+    void hide() {
+        try {
+            if (!initialized) initialize();
+            if (pending != null) pending.setBoolean(null, false);
+        } catch (ReflectiveOperationException | LinkageError error) {
+            FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] Could not hide Chromatic tooltip.");
+        }
+    }
+
     void finishFrame() {
         if (restore == null) return;
         Restore pendingRestore = restore;

@@ -12,6 +12,7 @@ import codechicken.nei.LayoutStyleMinecraft;
 import codechicken.nei.VisiblityData;
 import codechicken.nei.api.LayoutStyle;
 import cpw.mods.fml.common.FMLLog;
+import io.github.wdy.easytouch.layout.GlobalTouchMenu;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import org.apache.logging.log4j.Level;
 
@@ -56,7 +57,12 @@ final class RightTooltipLayout extends LayoutStyleMinecraft {
         Rectangle4i full = panel.calculateBounds(gui);
         int lowerHeight = full.h / 2;
         int upperHeight = full.h - lowerHeight;
-        if (full.w < 16 || lowerHeight < 16) return;
+        // Keep the tooltip viewport above the bottom settings button, including a small gap.
+        int tooltipTop = full.y + upperHeight;
+        int tooltipBottom = Math.min(full.y + full.h,
+            gui.height - GlobalTouchMenu.MARGIN - GlobalTouchMenu.SIZE - 4);
+        int tooltipHeight = tooltipBottom - tooltipTop;
+        if (full.w < 16 || tooltipHeight < 16) return;
         try {
             if (header == null) {
                 header = ItemPanel.class.getDeclaredMethod("resizeHeader", GuiContainer.class);
@@ -76,7 +82,7 @@ final class RightTooltipLayout extends LayoutStyleMinecraft {
             panel.historyPanel.resize(gui);
             panel.craftablesPanel.resize(gui);
             owner = gui;
-            tooltipArea = new Rectangle4i(full.x, full.y + upperHeight, full.w, lowerHeight);
+            tooltipArea = new Rectangle4i(full.x, tooltipTop, full.w, tooltipHeight);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             failed = true;
             super.layout(gui, visibility);

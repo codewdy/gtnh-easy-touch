@@ -67,6 +67,7 @@ public final class TouchButtons {
             if (item == 1) config.toggleButtons();
             else if (item == 2 && !(mc.currentScreen instanceof LayoutEditor)) openRequested = true;
             else if (item == 3 && !(mc.currentScreen instanceof FeatureConfigScreen)) configRequested = true;
+            else if (item == 4) config.toggleHideTooltips();
             else if (item == GlobalTouchMenu.TOUCHPAD) {
                 if (wasMouse) mouseControl.reset();
                 else if (available()) mouseControl.open();
@@ -180,7 +181,7 @@ public final class TouchButtons {
     private String[] menuLabels() {
         return new String[]{config.buttonsVisible ? "隐藏所有按键" : "显示所有按键",
             mc.currentScreen instanceof LayoutEditor ? "正在配置按键映射" : "配置按键映射",
-            "功能配置"};
+            "功能配置", config.hideTooltips ? "显示 tooltips" : "隐藏 tooltips"};
     }
     private int textWidth(String label) { return (int)Math.ceil(mc.fontRenderer.getStringWidth(label)*.8f); }
     private int fittedMenuWidth(int textWidth, int screenWidth) {

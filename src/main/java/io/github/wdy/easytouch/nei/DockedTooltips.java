@@ -26,6 +26,7 @@ import org.lwjgl.opengl.GL11;
 public final class DockedTooltips {
     private static DockedTooltips instance;
     private static TouchConfig config;
+    private static boolean hidden() { return config != null && config.hideTooltips; }
     static boolean enabled() { return config != null && config.optimizeTooltip; }
     private static Predicate<TouchSample> menuPriority = sample -> false;
     static void setMenuPriority(Predicate<TouchSample> priority) { menuPriority = priority; }
@@ -74,7 +75,7 @@ public final class DockedTooltips {
             }
             return true;
         }
-        if (!enabled() || sample.kind != TouchSample.Kind.DOWN || screen == null
+        if (hidden() || !enabled() || sample.kind != TouchSample.Kind.DOWN || screen == null
                 || screen != Minecraft.getMinecraft().currentScreen || !Display.isActive()
                 || TouchInput.guiMouseHeld() || TouchInput.guiAwaitingSecond() || menuPriority.test(sample)
                 || !viewport.contains((int) (sample.x * screen.width), (int) (sample.y * screen.height))) return false;
@@ -96,7 +97,7 @@ public final class DockedTooltips {
         if (screen != event.gui) { viewport.reset(); owner = null; }
         screen = event.gui;
         viewport.hide();
-        if (!enabled()) viewport.reset();
+        if (!enabled() || hidden()) viewport.reset();
     }
 
     private int contentWidthLimit() {
@@ -125,10 +126,16 @@ public final class DockedTooltips {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void nativeTooltip(Event event) {
+        if (hidden() && event.getClass().getName().equals(
+                "com.gtnewhorizon.gtnhlib.client.event.RenderTooltipEvent") && event.isCancelable()) {
+            event.setCanceled(true);
+            return;
+        }
         if (enabled() && screen != null && Display.isActive()) viewport.intercept(event, screen, tooltipLayout);
     }
 
     private void prepareChromatic(GuiScreenEvent.DrawScreenEvent.Post event) {
+        if (hidden()) { chromatic.hide(); return; }
         if (enabled() && event.gui == screen && Display.isActive()) chromatic.draw(screen, viewport, tooltipLayout);
     }
 

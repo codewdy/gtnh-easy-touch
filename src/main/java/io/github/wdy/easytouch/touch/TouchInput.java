@@ -24,7 +24,7 @@ import org.lwjglx.opengl.Display;
 import static org.lwjgl.sdl.SDLInit.SDL_INIT_EVENTS;
 import static org.lwjgl.sdl.SDLInit.SDL_WasInit;
 
-/** Owns the native source and forwards copied events on the client tick. */
+/** Owns the native source and forwards copied events on the client thread. */
 // Keep SDL3 references intact; legacy input/window calls must explicitly use the lwjgl3ify shim.
 @Lwjgl3Aware
 public final class TouchInput {
@@ -145,9 +145,10 @@ public final class TouchInput {
         // Display.update overwrites SDL button flags even on frames without a client tick.
         // Restore our owners before Mouse Tweaks (NORMAL priority) samples right-button state.
         syncMouseButtons();
-        if (event.phase == TickEvent.Phase.START && Display.isActive() && mc.currentScreen != null
-                && io.github.wdy.easytouch.layout.TouchButtons.instance.mouseControlActive()) {
-            // Match physical pointer sampling at render cadence, not only the 20 Hz client tick.
+        if (event.phase == TickEvent.Phase.START && Display.isActive()
+                && (mc.currentScreen == null
+                    || io.github.wdy.easytouch.layout.TouchButtons.instance.mouseControlActive())) {
+            // Sample world camera drags and GUI pointer motion every frame, not only at 20 Hz.
             // Button transitions remain queued for vanilla's next input loop.
             dispatchPending();
             io.github.wdy.easytouch.layout.TouchButtons.instance.flushMouseMotion();

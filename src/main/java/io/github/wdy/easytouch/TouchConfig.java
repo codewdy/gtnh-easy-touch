@@ -11,6 +11,7 @@ public final class TouchConfig {
     public boolean autoStep;
     public boolean autoTool;
     public boolean optimizeTooltip;
+    public boolean hideTooltips;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
     public final float touchDragSensitivity;
@@ -20,7 +21,7 @@ public final class TouchConfig {
         layoutFile = new File(path.getParentFile(), "gtnheasytouch-layout.json");
         file = new Configuration(path);
         file.load();
-        file.getCategory("touch").remove("hideTooltips");
+        hideTooltips = file.getBoolean("hideTooltips", "touch", false, "Hide native and Chromatic tooltips.");
         optimizeTooltip = file.getBoolean("optimizeTooltip", "touch", true,
             "Dock native tooltips in the lower half of the NEI right column and enable touch scrolling.");
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
@@ -58,6 +59,12 @@ public final class TouchConfig {
     public void toggleButtons() {
         buttonsVisible = !buttonsVisible;
         file.get("touch", "showButtons", true).set(buttonsVisible);
+        file.save();
+    }
+
+    public void toggleHideTooltips() {
+        hideTooltips = !hideTooltips;
+        file.get("touch", "hideTooltips", false).set(hideTooltips);
         file.save();
     }
 
