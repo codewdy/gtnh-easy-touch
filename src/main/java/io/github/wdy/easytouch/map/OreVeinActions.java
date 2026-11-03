@@ -27,9 +27,11 @@ final class OreVeinActions {
         }
         return null;
     }
-    static void deplete(Object ore) throws ReflectiveOperationException {
-        if (!(Boolean) ore.getClass().getMethod("isDepleted").invoke(ore))
-            ore.getClass().getMethod("toggleOreVein").invoke(ore);
+    static boolean isDepleted(Object ore) throws ReflectiveOperationException {
+        return (Boolean) ore.getClass().getMethod("isDepleted").invoke(ore);
+    }
+    static void toggleDepleted(Object ore) throws ReflectiveOperationException {
+        ore.getClass().getMethod("toggleOreVein").invoke(ore);
         Class<?> type = Class.forName(MANAGER);
         type.getMethod("forceRefresh").invoke(type.getField("instance").get(null));
     }

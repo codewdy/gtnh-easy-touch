@@ -30,6 +30,14 @@ public final class MapActionMenu extends GuiScreen {
         add = new GuiButton(0, 0, 0, "添加路径点");
         teleport = new GuiButton(1, 0, 0, "传送");
         depleted = new GuiButton(3, 0, 0, "标记为枯竭");
+        if (ore != null) {
+            try {
+                if (OreVeinActions.isDepleted(ore)) depleted.displayString = "取消枯竭标记";
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                depleted.enabled = false;
+                fail(e);
+            }
+        }
         rows = ore == null ? new GuiButton[] {add, teleport} : new GuiButton[] {add, teleport, depleted};
         parent.setWorldAndResolution(mc, width, height);
         try {
@@ -61,7 +69,7 @@ public final class MapActionMenu extends GuiScreen {
         if (button.id == 2) { mc.displayGuiScreen(parent); return; }
         try {
             if (button.id == 3) {
-                OreVeinActions.deplete(ore);
+                OreVeinActions.toggleDepleted(ore);
                 mc.displayGuiScreen(parent);
             } else if (button.id == 0) {
                 Class<?> ui = Class.forName("journeymap.client.ui.UIManager");
