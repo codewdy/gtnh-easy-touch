@@ -47,7 +47,7 @@ public final class ClientInput {
             public int width() { return input.mc.displayWidth; }
             public int height() { return input.mc.displayHeight; }
             public void turn(float dx, float dy) {
-                input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
+                input.turn(dx * config.touchDragSensitivityX, dy * config.touchDragSensitivityY);
             }
             public void button(int button, boolean down) { actions.button(button, down); }
             public boolean holdingUseItem() { return io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer == null ? null : input.mc.thePlayer.getHeldItem()); }

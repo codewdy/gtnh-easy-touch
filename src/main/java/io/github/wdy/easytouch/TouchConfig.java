@@ -14,7 +14,8 @@ public final class TouchConfig {
     public boolean hideTooltips;
     public final boolean touchEnabled;
     public final boolean touchLogEvents;
-    public final float touchDragSensitivity;
+    public float touchDragSensitivityX;
+    public float touchDragSensitivityY;
     public final boolean nativeTextInput;
 
     public TouchConfig(File path) {
@@ -45,7 +46,8 @@ public final class TouchConfig {
         double sensitivity = dragSensitivity.getDouble(1.0);
         if (!Double.isFinite(sensitivity)) sensitivity = 1.0;
         sensitivity = Math.max(0.1, Math.min(5.0, sensitivity));
-        touchDragSensitivity = (float) sensitivity;
+        touchDragSensitivityX = readSensitivity("dragSensitivityX", sensitivity);
+        touchDragSensitivityY = readSensitivity("dragSensitivityY", sensitivity);
         dragSensitivity.set(sensitivity);
         Property mapScale = file.get("map", "journeyMapIconScale", 2.0,
             "JourneyMap 5.2 map icon multiplier, independent of GUI scale (1.0 = original size, 2.0 = twice the width and height). "
@@ -55,6 +57,25 @@ public final class TouchConfig {
         mapMultiplier = Math.max(1.0, Math.min(8.0, mapMultiplier));
         mapScale.set(mapMultiplier);
         io.github.wdy.easytouch.map.JourneyMapScale.configure(mapMultiplier);
+        file.save();
+    }
+
+    private float readSensitivity(String key, double fallback) {
+        Property property = file.get("touch", key, fallback,
+            "Touch camera axis sensitivity multiplier (0.1 to 5.0). Applies immediately.", 0.1, 5.0);
+        double value = property.getDouble(fallback);
+        if (!Double.isFinite(value)) value = fallback;
+        value = Math.max(0.1, Math.min(5.0, value));
+        property.set(value);
+        return (float) value;
+    }
+
+    public void setDragSensitivity(boolean horizontal, float value) {
+        if (!Float.isFinite(value)) value = 1.0F;
+        value = Math.round(Math.max(0.1F, Math.min(5.0F, value)) * 10) / 10.0F;
+        if (horizontal) touchDragSensitivityX = value;
+        else touchDragSensitivityY = value;
+        file.get("touch", horizontal ? "dragSensitivityX" : "dragSensitivityY", 1.0).set((double) value);
         file.save();
     }
 
