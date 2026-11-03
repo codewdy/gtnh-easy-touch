@@ -19,16 +19,18 @@ public final class FeatureConfigScreen extends GuiScreen {
         buttonList.clear();
         int w = Math.min(240, width - 20);
         int x = (width - w) / 2;
-        int y = Math.max(32, height / 2 - 58);
+        int y = Math.max(32, height / 2 - 72);
         buttonList.add(new TextControlButton(0, x, y, w, label(0)));
         buttonList.add(new TextControlButton(1, x, y + 28, w, label(1)));
         buttonList.add(new TextControlButton(2, x, y + 56, w, label(2)));
-        buttonList.add(new TextControlButton(3, x, y + 96, w, "返回"));
+        buttonList.add(new TextControlButton(4, x, y + 84, w, label(4)));
+        buttonList.add(new TextControlButton(3, x, y + 124, w, "返回"));
     }
 
     private String label(int id) {
         if (id == 0) return "自动上台阶：" + (config.autoStep ? "开启" : "关闭");
         if (id == 1) return "优化 tooltip：" + (config.optimizeTooltip ? "开启" : "关闭");
+        if (id == 4) return "EZMiner 优化：" + (io.github.wdy.easytouch.mining.EzMinerAutoVein.enabled ? "开启" : "关闭");
         return "自动切换工具：" + (config.autoTool ? "开启" : "关闭");
     }
 
@@ -37,6 +39,7 @@ public final class FeatureConfigScreen extends GuiScreen {
         if (button.id == 0) config.toggleAutoStep();
         else if (button.id == 1) config.toggleOptimizeTooltip();
         else if (button.id == 2) config.toggleAutoTool();
+        else if (button.id == 4) config.toggleEzMinerOptimization();
         button.displayString = label(button.id);
     }
 
@@ -47,9 +50,9 @@ public final class FeatureConfigScreen extends GuiScreen {
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
-        int y = Math.max(32, height / 2 - 58);
+        int y = Math.max(32, height / 2 - 72);
         drawCenteredString(fontRendererObj, "功能配置", width / 2, y - 26, 0xFFFFFF);
-        drawCenteredString(fontRendererObj, "修改后立即保存", width / 2, y + 82, 0xAAAAAA);
+        drawCenteredString(fontRendererObj, "修改后立即保存", width / 2, y + 110, 0xAAAAAA);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 }

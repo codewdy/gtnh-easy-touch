@@ -29,6 +29,8 @@ public final class TouchConfig {
             "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");
         autoTool = file.getBoolean("autoTool", "mining", true,
             "Automatically select a hotbar tool when mining. Prefer harvest capability, then mining speed.");
+        io.github.wdy.easytouch.mining.EzMinerAutoVein.enabled = file.getBoolean("ezMinerAutoGtVein", "mining", true,
+            "In EZMiner basic chain mode, use GT vein blast search for GT large ore targets. Applies to preview and harvesting; other modes stay manual.");
         touchEnabled = file.getBoolean("enabled", "touch", true,
             "Handle native SDL3 touch gestures and GUI mouse emulation. Disabling forwarding does not remove the lwjgl3ify/SDL3 requirement.");
         touchLogEvents = file.getBoolean("logEvents", "touch", false,
@@ -77,6 +79,13 @@ public final class TouchConfig {
     public void toggleAutoTool() {
         autoTool = !autoTool;
         file.get("mining", "autoTool", true).set(autoTool);
+        file.save();
+    }
+
+    public void toggleEzMinerOptimization() {
+        boolean enabled = !io.github.wdy.easytouch.mining.EzMinerAutoVein.enabled;
+        io.github.wdy.easytouch.mining.EzMinerAutoVein.enabled = enabled;
+        file.get("mining", "ezMinerAutoGtVein", true).set(enabled);
         file.save();
     }
 

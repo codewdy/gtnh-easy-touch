@@ -7,6 +7,7 @@ public final class TouchLook {
         void turn(float dx,float dy);
         void button(int button,boolean down);
         boolean holdingSword();
+        default boolean holdingUseItem() { return false; }
     }
     private final Port port;
     private final ClickGesture gesture;
@@ -15,6 +16,7 @@ public final class TouchLook {
         gesture=new ClickGesture(new ClickGesture.Port() {
             public void move(float x,float y,float dx,float dy) { port.turn(dx,dy); }
             public void button(int b,boolean down) { port.button(b,down); }
+            public int holdButton() { return port.holdingUseItem() ? 1 : 0; }
             public int tapButton() { return port.holdingSword() ? 0 : 1; }
         },true);
     }

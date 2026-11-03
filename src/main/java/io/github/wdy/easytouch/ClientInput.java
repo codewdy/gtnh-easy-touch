@@ -50,6 +50,7 @@ public final class ClientInput {
                 input.turn(dx * config.touchDragSensitivity, dy * config.touchDragSensitivity);
             }
             public void button(int button, boolean down) { actions.button(button, down); }
+            public boolean holdingUseItem() { return io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer == null ? null : input.mc.thePlayer.getHeldItem()); }
             public boolean holdingSword() { return SwordAttack.holdingSword(input.mc); }
         });
     }
