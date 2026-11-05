@@ -40,6 +40,14 @@ public final class TeleportTargets {
         } catch (ReflectiveOperationException | RuntimeException ex) {
             LogManager.getLogger("GTNH Easy Touch").warn("Cannot load teleport targets", ex);
             status(menu, "旅行地图不可用");
+        } finally {
+            TouchLayout.Button back = new TouchLayout.Button();
+            back.label = "返回";
+            back.action = () -> {
+                Minecraft mc = Minecraft.getMinecraft();
+                if (mc.thePlayer != null) mc.thePlayer.sendChatMessage("/back");
+            };
+            menu.options.add(0, back);
         }
     }
     private static void status(TouchLayout.Button menu, String text) {

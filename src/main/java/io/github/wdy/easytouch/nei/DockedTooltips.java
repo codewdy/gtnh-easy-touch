@@ -93,7 +93,7 @@ public final class DockedTooltips {
     @SubscribeEvent
     public void before(GuiScreenEvent.DrawScreenEvent.Pre event) {
         chromatic.finishFrame();
-        RightTooltipLayout.prepare();
+        LeftTooltipLayout.prepare();
         if (screen != event.gui) { viewport.reset(); owner = null; }
         screen = event.gui;
         viewport.hide();
@@ -102,7 +102,7 @@ public final class DockedTooltips {
 
     private int contentWidthLimit() {
         if (!enabled() || !(screen instanceof GuiContainer)) return 0;
-        Rectangle4i area = RightTooltipLayout.tooltipArea((GuiContainer) screen);
+        Rectangle4i area = LeftTooltipLayout.tooltipArea((GuiContainer) screen);
         return area == null ? 0 : Math.max(0,
             Math.min(screen.width, area.x + area.w) - Math.max(0, area.x) - NativeTooltipViewport.HORIZONTAL_PADDING);
     }
@@ -110,7 +110,7 @@ public final class DockedTooltips {
     private boolean place(int contentWidth, int contentHeight) {
         if (!enabled() || !(screen instanceof GuiContainer) || !NEIClientConfig.isLoaded()
                 || ItemPanels.itemPanel == null) return false;
-        Rectangle4i panel = RightTooltipLayout.tooltipArea((GuiContainer) screen);
+        Rectangle4i panel = LeftTooltipLayout.tooltipArea((GuiContainer) screen);
         if (panel == null) return false;
         int left = Math.max(0, panel.x);
         int right = Math.min(screen.width, panel.x + panel.w);

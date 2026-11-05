@@ -24,7 +24,7 @@ public final class TouchConfig {
         file.load();
         hideTooltips = file.getBoolean("hideTooltips", "touch", false, "Hide native and Chromatic tooltips.");
         optimizeTooltip = file.getBoolean("optimizeTooltip", "touch", true,
-            "Dock native tooltips in the lower half of the NEI right column and enable touch scrolling.");
+            "Dock native tooltips in the lower half of the NEI left bookmark column and enable touch scrolling.");
         buttonsVisible = file.getBoolean("showButtons", "touch", true, "Show custom touch buttons and the movement wheel. The global menu stays visible.");
         autoStep = file.getBoolean("autoStep", "movement", false,
             "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");

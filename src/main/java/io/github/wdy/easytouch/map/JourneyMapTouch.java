@@ -14,7 +14,7 @@ public final class JourneyMapTouch {
     private boolean moved;
     public void tick(long now) {
         Minecraft mc = Minecraft.getMinecraft();
-        if (hold == null || moved || mc.currentScreen != screen || now - hold.timestamp < 600000000L) return;
+        if (hold == null || moved || mc.currentScreen != screen || now - hold.timestamp < 250000000L) return;
         TouchSample point = hold;
         hold = null;
         TouchInput.cancelGuiTouch();
