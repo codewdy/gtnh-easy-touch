@@ -55,6 +55,7 @@ public final class TouchButtons {
         }, mouse::motion);
         reset = () -> { cancel(); resetInputs.run(); TouchInput.cancelGuiTouch(); };
         mappingMenu = new MappingMenu(option -> {
+            if (option.mode == 7) { io.github.wdy.easytouch.input.AutoAttack.toggle(); return; }
             if (option.mode == 6) { toggleRepeat(option); return; }
             List<Integer> combination = keys(option);
             chords.press(combination);
@@ -138,6 +139,7 @@ public final class TouchButtons {
             if (!visible(b) || !b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) continue;
             contacts.put(id, b);
             if (b.mode == 3 || b.mode == 5) return true;
+            if (b.mode == 7) { io.github.wdy.easytouch.input.AutoAttack.toggle(); return true; }
             if (b.mode == 6) { toggleRepeat(b); return true; }
             if (b.mode == 2 && held.containsKey(b)) { release(b); return true; }
             if (!held.containsKey(b)) {
@@ -198,8 +200,9 @@ public final class TouchButtons {
         sizeMenus(w,h);
         if (available() && buttonsVisible())
         for (TouchLayout.Button b : layout.buttons) if (visible(b)) {
-            drawButton(mc, b, w, h, (held.containsKey(b) || repeating.containsKey(b)), false);
-            if (b.mode != 5 && (b.mode == 3 ? b.options.isEmpty() : keys(b).isEmpty())) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
+            drawButton(mc, b, w, h, (held.containsKey(b) || repeating.containsKey(b)
+                || b.mode == 7 && io.github.wdy.easytouch.input.AutoAttack.isEnabled()), false);
+            if (b.mode != 5 && b.mode != 7 && (b.mode == 3 ? b.options.isEmpty() : keys(b).isEmpty())) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
         }
         if (menuAvailable()) drawMenu(w, h);
         if (available() && config.buttonsVisible && mappingMenu.isOpen()) drawMappingMenu(w,h);
@@ -248,7 +251,7 @@ public final class TouchButtons {
             int y=mappingMenu.top(h)+row*MappingMenu.ROW;
             if (row > 0) menuDivider(x,y,width);
             TouchLayout.Button option=options.get(index);
-            Circle.text(mc,option.label,x+MENU_PADDING,y+7,width-MENU_PADDING*2,false,option.mode != 3 && option.mode != 5 && option.action == null && keys(option).isEmpty() ? 0xFF8888 : 0xECF4FA);
+            Circle.text(mc,option.label,x+MENU_PADDING,y+7,width-MENU_PADDING*2,false,option.mode != 3 && option.mode != 5 && option.mode != 7 && option.action == null && keys(option).isEmpty() ? 0xFF8888 : option.mode == 7 && io.github.wdy.easytouch.input.AutoAttack.isEnabled() ? 0x80E0B0 : 0xECF4FA);
         }
         if (options.isEmpty()) Circle.text(mc,"请先添加子选项",x+MENU_PADDING,mappingMenu.top(h)+7,width-MENU_PADDING*2,false,0xFF8888);
         int y=mappingMenu.top(h)+mappingMenu.visibleRows(h)*MappingMenu.ROW;

@@ -34,6 +34,7 @@ public final class ClientInput {
     private final TouchHotbar hotbar = new TouchHotbar(slot -> input.mc.thePlayer.inventory.currentItem = slot);
     private final TouchMovement movement = new TouchMovement(keys.newSource());
     private final AutoStep autoStep = new AutoStep();
+    private final io.github.wdy.easytouch.input.AutoAttack autoAttack = new io.github.wdy.easytouch.input.AutoAttack();
     private final TouchConfig config;
     private final TouchLook touchLook;
     private final KeyStateMerger.Source touchKeys = keys.newSource();
@@ -139,6 +140,7 @@ public final class ClientInput {
         if (!config.touchEnabled) movement.cancel();
         if (!config.touchEnabled || input.mc.gameSettings.hideGUI) hotbar.cancel();
         if (event.phase == TickEvent.Phase.START) {
+            autoAttack.tick(input.mc, input.inWorld());
             touchLook.tick(TouchInput.nanoTime());
             keys.sync(input.inWorld());
             if (config.autoTool && input.inWorld() && input.mc.gameSettings.keyBindAttack.getIsKeyPressed())

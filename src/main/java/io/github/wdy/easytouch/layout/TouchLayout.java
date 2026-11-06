@@ -57,7 +57,7 @@ public final class TouchLayout {
         b.x = clamp(b.x); b.y = clamp(b.y);
         b.size = Math.max(24, Math.min(100, b.size));
         b.opacity = Math.max(10, Math.min(100, b.opacity));
-        b.mode = b.mode == 2 || b.mode == 3 || b.mode == 5 || b.mode == 6 ? b.mode : 1;
+        b.mode = b.mode == 2 || b.mode == 3 || b.mode == 5 || b.mode == 6 || b.mode == 7 ? b.mode : 1;
         if (!ChordState.valid(b.key)) b.key = 0;
         if (b.label == null) b.label = "按键";
         if (b.binding == null) b.binding = "";

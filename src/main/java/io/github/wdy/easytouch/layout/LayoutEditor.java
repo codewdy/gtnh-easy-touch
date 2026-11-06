@@ -52,7 +52,7 @@ public final class LayoutEditor extends GuiScreen {
             name = new GuiTextField(fontRendererObj, x, y, 290, 20); name.setMaxStringLength(40); name.setText(b.label);
             button(10, x, y+26, 290, b.mode == 3 ? "配置子选项 (" + b.options.size() + ")" : "映射: " + target(b));
             if (option >= 0) button(34, x, y+146, 290, "删除此子选项");
-            button(11, x, y+50, 290, "触发: " + (b.mode == 6 ? "切换连发" : b.mode == 5 ? "旅行地图传送" : b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
+            button(11, x, y+50, 290, "触发: " + (b.mode == 7 ? "自动攻击" : b.mode == 6 ? "切换连发" : b.mode == 5 ? "旅行地图传送" : b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
             button(12, x, y+74, 142, "世界: " + (b.world ? "显示" : "隐藏"));
             button(13, x+148, y+74, 142, "其他: " + (b.other ? "显示" : "隐藏"));
             button(14, x, y+98, 142, "大小 -"); button(15, x+148, y+98, 142, "大小 + ("+b.size+")");
@@ -112,6 +112,7 @@ public final class LayoutEditor extends GuiScreen {
         return text.length() == 0 ? "未设置" : text.toString();
     }
     private String target(TouchLayout.Button b) {
+        if (b.mode == 7) return "切换自动攻击";
         if (b.mode == 5) return "旅行地图传送";
         if (b.mode == 3) return "菜单 (" + b.options.size() + " 项)";
         return !b.keys.isEmpty() ? chordLabel(b.keys) : b.binding.isEmpty() ? (b.key == 0 ? "未设置" : b.key < 0 ? "鼠标"+keyLabel(b.key)+"键" : Keyboard.getKeyName(b.key)) : I18n.format(b.binding);
@@ -130,8 +131,8 @@ public final class LayoutEditor extends GuiScreen {
                 catch (IOException ex) { message = "保存失败: " + ex.getMessage(); }
                 return;
             case 7: mc.displayGuiScreen(parent); return;
-            case 10: if (b.mode == 5) break; if (b.mode == 3) { optionPage=0; screen=3; break; } selectedKeys.clear(); selectedKeys.addAll(owner.keys(b)); screen = 2; break;
-            case 11: b.mode = b.mode == 1 ? 2 : b.mode == 2 ? 6 : b.mode == 6 ? 3 : b.mode == 3 ? 5 : 1; break;
+            case 10: if (b.mode == 7 || b.mode == 5) break; if (b.mode == 3) { optionPage=0; screen=3; break; } selectedKeys.clear(); selectedKeys.addAll(owner.keys(b)); screen = 2; break;
+            case 11: b.mode = b.mode == 1 ? 2 : b.mode == 2 ? 6 : b.mode == 6 ? 3 : b.mode == 3 ? 5 : b.mode == 5 ? 7 : 1; break;
             case 12: b.world = !b.world; break;
             case 13: b.other = !b.other; break;
             case 14: if (b != null) b.size = Math.max(24,b.size-4); break;
