@@ -76,8 +76,13 @@ public final class MapActionMenu extends GuiScreen {
                 ui.getMethod("openWaypointEditor", waypointType, boolean.class, Class.forName("journeymap.client.ui.component.JmUI"))
                     .invoke(ui.getMethod("getInstance").invoke(null), waypoint, true, parent);
             } else if (button.id == 1) {
-                Object command = teleportType.getConstructor(waypointType).newInstance(waypoint);
-                teleportType.getMethod("run").invoke(command);
+                if (mc.isSingleplayer()) {
+                    SafeMapTeleport.request(mc, x, z);
+                    mc.displayGuiScreen(null);
+                } else {
+                    Object command = teleportType.getConstructor(waypointType).newInstance(waypoint);
+                    teleportType.getMethod("run").invoke(command);
+                }
             }
         } catch (ReflectiveOperationException | RuntimeException e) { fail(e); }
     }
