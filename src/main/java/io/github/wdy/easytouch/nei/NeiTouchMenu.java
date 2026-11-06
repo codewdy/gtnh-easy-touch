@@ -76,12 +76,18 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         }
         gesture = new ItemTouchGesture(new ItemTouchGesture.Port() {
             public void hover(float x, float y) { new GuiTouchMouse(mc).move(x, y); }
-            public void drag(TouchSample sample) { TouchInput.dragGuiTouch(sample); }
+            public void drag(TouchSample sample) {
+                // GuiRecipe handles widget clicks before GuiContainerManager's input handlers.
+                // A drag replays DOWN too, so suppress it as well as a stationary tap.
+                if (recipeSelection != null) { hover(sample.x, sample.y); return; }
+                TouchInput.dragGuiTouch(sample);
+            }
             public void cancelDrag() { TouchInput.cancelGuiTouch(); }
             public void menu() {
                 menuOpen = true; sizeMenu();
             }
             public void tap(TouchSample down, TouchSample up) {
+                if (recipeSelection != null) return;
                 TouchInput.dragGuiTouch(down);
                 TouchInput.dragGuiTouch(up);
             }
@@ -104,7 +110,8 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             });
             MinecraftForge.EVENT_BUS.register(search);
             FMLCommonHandler.instance().bus().register(search);
-            codechicken.nei.guihook.GuiContainerManager.addInputHandler(menu);
+            // Consume item clicks before NEI opens recipes or handles panel actions.
+            codechicken.nei.guihook.GuiContainerManager.inputHandlers.addFirst(menu);
             MinecraftForge.EVENT_BUS.register(menu);
             FMLCommonHandler.instance().bus().register(menu);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
@@ -340,7 +347,16 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
 
     @Override public boolean mouseClicked(GuiContainer gui, int x, int y, int button) {
         if (pendingAe != null) { pendingAe = null; return true; }
-        if (gui != screen || !menuOpen) return false;
+        if (gui != screen || !menuOpen) {
+            if (!TouchInput.isActive() || (button != 0 && button != 1)
+                    || !NEIClientConfig.isLoaded() || !NEIClientConfig.isEnabled()
+                    || NEIClientConfig.isHidden()) return false;
+            try {
+                Widget target = panelAt(x, y);
+                if (target == null) target = recipeTargets.widgetAt(gui, x, y);
+                return target != null && target.getStackMouseOver(x, y) != null;
+            } catch (ReflectiveOperationException error) { fail(error); return false; }
+        }
         try {
             int row = hit(x, y);
             if (button != 0 || row < 0) close();

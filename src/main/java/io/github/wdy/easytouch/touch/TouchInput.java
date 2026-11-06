@@ -106,6 +106,8 @@ public final class TouchInput {
         });
     }
 
+    public static boolean isActive() { return installed != null && installed.active; }
+
     public static boolean guiAwaitingSecond() { return installed != null && installed.guiMouse.awaitingSecond(); }
 
     public static boolean guiMouseHeld() { return installed != null && installed.guiMouse.held(); }
