@@ -36,6 +36,7 @@ public final class TouchButtons {
     private final MouseControl mouseControl;
     private final Map<String, TouchLayout.Button> contacts = new HashMap<String, TouchLayout.Button>();
     private final Map<TouchLayout.Button, List<Integer>> held = new IdentityHashMap<TouchLayout.Button, List<Integer>>();
+    private final Map<TouchLayout.Button, Long> repeating = new IdentityHashMap<TouchLayout.Button, Long>();
     public boolean openRequested;
     private boolean configRequested;
     public String loadError;
@@ -54,6 +55,7 @@ public final class TouchButtons {
         }, mouse::motion);
         reset = () -> { cancel(); resetInputs.run(); TouchInput.cancelGuiTouch(); };
         mappingMenu = new MappingMenu(option -> {
+            if (option.mode == 6) { toggleRepeat(option); return; }
             List<Integer> combination = keys(option);
             chords.press(combination);
             chords.release(combination);
@@ -136,6 +138,7 @@ public final class TouchButtons {
             if (!visible(b) || !b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) continue;
             contacts.put(id, b);
             if (b.mode == 3 || b.mode == 5) return true;
+            if (b.mode == 6) { toggleRepeat(b); return true; }
             if (b.mode == 2 && held.containsKey(b)) { release(b); return true; }
             if (!held.containsKey(b)) {
                 List<Integer> combination = keys(b);
@@ -145,7 +148,32 @@ public final class TouchButtons {
         }
         return mouseControl.isOpen() && mouseControl.accept(s, r.getScaledWidth(), r.getScaledHeight());
     }
+    private void toggleRepeat(TouchLayout.Button b) {
+        if (repeating.containsKey(b)) { release(b); return; }
+        List<Integer> combination = keys(b);
+        if (combination.isEmpty()) return;
+        held.put(b, combination);
+        chords.press(combination);
+        repeating.put(b, Minecraft.getSystemTime() + 100);
+    }
+    private void tickRepeat() {
+        long now = Minecraft.getSystemTime();
+        for (Map.Entry<TouchLayout.Button, Long> entry : repeating.entrySet()) {
+            if (now < entry.getValue()) continue;
+            TouchLayout.Button b = entry.getKey();
+            List<Integer> combination = held.remove(b);
+            if (combination != null) chords.release(combination);
+            else {
+                combination = keys(b);
+                held.put(b, combination);
+                chords.press(combination);
+            }
+            // Reschedule from now: never replay a burst after a stalled frame.
+            entry.setValue(now + 100);
+        }
+    }
     private void release(TouchLayout.Button b) {
+        repeating.remove(b);
         List<Integer> combination = held.remove(b);
         if (combination != null) chords.release(combination);
     }
@@ -164,13 +192,13 @@ public final class TouchButtons {
             KeyBinding.setKeyBindState(code, mc.currentScreen == null && Display.isActive() && (code < 0 ? TouchInput.mouseButtonDown(code+100) : VirtualKeyboard.physicalDown(code)));
             for (KeyBinding binding : mc.gameSettings.keyBindings) if (binding.getKeyCode() == code) while (binding.isPressed()) { }
         }
-        chords.clear(); held.clear(); contacts.clear(); source.clear();
+        chords.clear(); repeating.clear(); held.clear(); contacts.clear(); source.clear();
     }
     public void draw(int w, int h) {
         sizeMenus(w,h);
         if (available() && buttonsVisible())
         for (TouchLayout.Button b : layout.buttons) if (visible(b)) {
-            drawButton(mc, b, w, h, held.containsKey(b), false);
+            drawButton(mc, b, w, h, (held.containsKey(b) || repeating.containsKey(b)), false);
             if (b.mode != 5 && (b.mode == 3 ? b.options.isEmpty() : keys(b).isEmpty())) mc.fontRenderer.drawStringWithShadow("!", b.left(w)+2, b.top(h)+2, 0xFF8888);
         }
         if (menuAvailable()) drawMenu(w, h);
@@ -281,6 +309,7 @@ public final class TouchButtons {
         if (e.phase != TickEvent.Phase.END) return;
         if (!menuAvailable()) menu.reset();
         if (!available() || !config.buttonsVisible && !mouseControl.isOpen()) cancel();
+        tickRepeat();
         keyboard.mouseModifiers(Collections.emptySet());
         if (configRequested) { configRequested = false; cancel(); mc.displayGuiScreen(new FeatureConfigScreen(config, mc.currentScreen)); }
         if (openRequested) { openRequested = false; cancel(); mc.displayGuiScreen(new LayoutEditor(this, mc.currentScreen)); }
