@@ -6,7 +6,6 @@ public final class TouchLook {
         boolean inWorld(); int width(); int height();
         void turn(float dx,float dy);
         void button(int button,boolean down);
-        boolean holdingSword();
         default boolean holdingUseItem() { return false; }
     }
     private final Port port;
@@ -17,7 +16,7 @@ public final class TouchLook {
             public void move(float x,float y,float dx,float dy) { port.turn(dx,dy); }
             public void button(int b,boolean down) { port.button(b,down); }
             public int holdButton() { return port.holdingUseItem() ? 1 : 0; }
-            public int tapButton() { return port.holdingSword() ? 0 : 1; }
+            public int tapButton() { return 1; }
         },true);
     }
     public void cancel() { gesture.cancel(); }

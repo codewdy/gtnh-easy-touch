@@ -3,7 +3,6 @@ package io.github.wdy.easytouch;
 import io.github.wdy.easytouch.input.KeyStateMerger;
 import io.github.wdy.easytouch.input.AutoStep;
 import io.github.wdy.easytouch.input.MinecraftInput;
-import io.github.wdy.easytouch.input.SwordAttack;
 import io.github.wdy.easytouch.input.TouchLook;
 import io.github.wdy.easytouch.input.TouchHotbar;
 import io.github.wdy.easytouch.input.TouchMovement;
@@ -52,7 +51,6 @@ public final class ClientInput {
             }
             public void button(int button, boolean down) { actions.button(button, down); }
             public boolean holdingUseItem() { return io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer == null ? null : input.mc.thePlayer.getHeldItem()); }
-            public boolean holdingSword() { return SwordAttack.holdingSword(input.mc); }
         });
     }
 
