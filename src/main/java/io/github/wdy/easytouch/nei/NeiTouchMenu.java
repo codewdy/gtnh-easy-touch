@@ -125,6 +125,21 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         return widget == ItemPanels.itemPanel || widget == ItemPanels.bookmarkPanel ? widget : null;
     }
 
+    private ItemStack stackAt(GuiContainer gui, Widget widget, int x, int y) throws ReflectiveOperationException {
+        ItemStack item = widget.getStackMouseOver(x, y);
+        if (item != null || !(widget instanceof RecipeWidget)) return item;
+        item = recipeTargets.tinkerFluid((RecipeWidget) widget, x, y);
+        if (item != null) return item;
+        // Fluid widgets expose their display stacks through NEI object handlers,
+        // rather than the recipe's PositionedStack list. Use explicit touch coordinates.
+        for (codechicken.nei.guihook.IContainerObjectHandler handler
+                : codechicken.nei.guihook.GuiContainerManager.objectHandlers) {
+            item = handler.getStackUnderMouse(gui, x, y);
+            if (item != null) return item;
+        }
+        return null;
+    }
+
     private int hit(int x, int y) {
         return menuOpen && stack != null && x >= left && x < left + width && y >= top && y < top + ROW * actions.length
             ? (y - top) / ROW : -1;
@@ -185,7 +200,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
                 ? aeTargets.at(gui, x, y) : null;
             // Preserve normal placement/distribution while the cursor already carries a stack.
             if ((slot != null || ae != null) && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
-            ItemStack item = target != null ? target.getStackMouseOver(x, y) : slot != null ? slot.getStack() : ae != null ? ae.item : null;
+            ItemStack item = target != null ? stackAt(gui, target, x, y) : slot != null ? slot.getStack() : ae != null ? ae.item : null;
             if (item == null || ItemPanels.bookmarkPanel.inEditingState()
                     || ItemPanels.itemPanel.draggedStack != null) return false;
             screen = gui;
@@ -233,7 +248,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         if (currentWidget == null) currentWidget = recipeTargets.widgetAt(screen, itemX, itemY);
         if (recipeSelection != null && (!(currentWidget instanceof RecipeWidget)
                 || !recipeSelection.matches((RecipeWidget) currentWidget, itemX, itemY))) return false;
-        ItemStack current = currentWidget == panel ? panel.getStackMouseOver(itemX, itemY) : null;
+        ItemStack current = currentWidget == panel ? stackAt(screen, panel, itemX, itemY) : null;
         // A page/filter/bookmark change must not act on a different item at the old position.
         return current != null && ItemStack.areItemStacksEqual(stack, current);
     }
@@ -294,11 +309,15 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             return;
         }
         ItemStack selected = stack;
+        boolean liquidTank = recipeSelection != null
+            && recipeTargets.tinkerFluid(recipeSelection.widget, itemX, itemY) != null;
+        Object lookup = liquidTank ? codechicken.nei.recipe.StackInfo.getFluid(selected) : selected;
+        String lookupType = liquidTank ? "liquid" : "item";
         GuiContainer source = screen;
         new GuiTouchMouse(mc).move(touchX, touchY);
         close();
-        if (action == 1) GuiCraftingRecipe.openRecipeGui("item", selected);
-        else if (action == 2) GuiUsageRecipe.openRecipeGui("item", selected);
+        if (action == 1) GuiCraftingRecipe.openRecipeGui(lookupType, lookup);
+        else if (action == 2) GuiUsageRecipe.openRecipeGui(lookupType, lookup);
         else if (action == 3) bookmark.invoke(null, selected, false, false);
         else if (action == 4) NeiFavoriteTreeShortcut.openFavorite(source);
     }
@@ -354,7 +373,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             try {
                 Widget target = panelAt(x, y);
                 if (target == null) target = recipeTargets.widgetAt(gui, x, y);
-                return target != null && target.getStackMouseOver(x, y) != null;
+                return target != null && stackAt(gui, target, x, y) != null;
             } catch (ReflectiveOperationException error) { fail(error); return false; }
         }
         try {
