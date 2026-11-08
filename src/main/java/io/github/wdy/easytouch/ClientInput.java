@@ -58,6 +58,7 @@ public final class ClientInput {
         ClientInput client = new ClientInput(config);
         io.github.wdy.easytouch.guide.WorldGuideHotkey.install();
         io.github.wdy.easytouch.touch.ModularUiTouchInput.install();
+        io.github.wdy.easytouch.smeltery.SmelteryTouch.install();
         MinecraftForge.EVENT_BUS.register(client);
         FMLCommonHandler.instance().bus().register(client);
     }
