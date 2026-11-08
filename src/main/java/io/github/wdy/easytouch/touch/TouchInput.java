@@ -204,6 +204,7 @@ public final class TouchInput {
             if (!forwarded.consumed) forwarded.consumed = io.github.wdy.easytouch.layout.TouchButtons.instance.accept(sample);
             if (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)
                 forwarded.consumed |= io.github.wdy.easytouch.smeltery.SmelteryTouch.accept(sample);
+            if (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET) forwarded.consumed |= VendingTouch.accept(sample);
             if (tooltipInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET))
                 forwarded.consumed |= tooltipInterceptor.test(sample);
             if (guiInterceptor != null && (!forwarded.consumed || sample.kind == TouchSample.Kind.RESET)) {
