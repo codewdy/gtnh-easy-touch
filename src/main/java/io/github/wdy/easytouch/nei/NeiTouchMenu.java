@@ -54,6 +54,8 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     private NeiRecipeTouchTarget.Selection recipeSelection;
     private final ContainerItemTarget inventoryTargets;
     private ContainerItemTarget.Selection inventorySelection;
+    private final StorageItemTarget storageTargets = new StorageItemTarget();
+    private ItemStack storageSelection;
     private GuiContainer screen;
     private ItemStack stack;
     private Widget panel;
@@ -195,12 +197,15 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
                     || TouchInput.guiAwaitingSecond()) return false;
             Widget target = panelAt(x, y);
             if (target == null) target = recipeTargets.widgetAt(gui, x, y);
-            Slot slot = target == null ? inventoryTargets.at(gui, x, y) : null;
-            AeItemTarget.Selection ae = target == null && slot == null && aeTargets != null
+            // EZ Storage overlays its virtual items on empty InventoryBasic slots.
+            // Resolve the displayed item first so those placeholders cannot mask it.
+            ItemStack storage = target == null ? storageTargets.at(gui, x, y) : null;
+            Slot slot = target == null && storage == null ? inventoryTargets.at(gui, x, y) : null;
+            AeItemTarget.Selection ae = target == null && storage == null && slot == null && aeTargets != null
                 ? aeTargets.at(gui, x, y) : null;
             // Preserve normal placement/distribution while the cursor already carries a stack.
-            if ((slot != null || ae != null) && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
-            ItemStack item = target != null ? stackAt(gui, target, x, y) : slot != null ? slot.getStack() : ae != null ? ae.item : null;
+            if ((slot != null || ae != null || storage != null) && (mc.thePlayer == null || mc.thePlayer.inventory.getItemStack() != null)) return false;
+            ItemStack item = target != null ? stackAt(gui, target, x, y) : slot != null ? slot.getStack() : ae != null ? ae.item : storage;
             if (item == null || ItemPanels.bookmarkPanel.inEditingState()
                     || ItemPanels.itemPanel.draggedStack != null) return false;
             screen = gui;
@@ -208,8 +213,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
             recipeSelection = target instanceof RecipeWidget
                 ? new NeiRecipeTouchTarget.Selection((RecipeWidget) target, x, y) : null;
             aeSelection = ae;
+            storageSelection = storage == null ? null : storage.copy();
             inventorySelection = slot == null ? null : new ContainerItemTarget.Selection(gui, slot);
-            actions = inventorySelection != null || aeSelection != null ? INVENTORY_ACTIONS
+            actions = inventorySelection != null || aeSelection != null || storageSelection != null ? INVENTORY_ACTIONS
                 : recipeSelection == null ? PANEL_ACTIONS : RECIPE_ACTIONS;
             menuOpen = false;
             holdContact = id;
@@ -236,6 +242,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
 
     private boolean targetCurrent() throws ReflectiveOperationException {
         if (screen == null || mc.currentScreen != screen || !Display.isActive()) return false;
+        if (storageSelection != null) return mc.thePlayer != null
+            && mc.thePlayer.inventory.getItemStack() == null
+            && ItemStack.areItemStacksEqual(storageSelection, storageTargets.at(screen, itemX, itemY));
         if (aeSelection != null) return aeSelection.current()
             && mc.thePlayer.inventory.getItemStack() == null;
         if (inventorySelection != null) {
@@ -291,7 +300,8 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         }
         if (!enabled(row)) return;
         if (action == 5) {
-            maximum = aeSelection != null ? aeSelection.maximum : inventorySelection.slot.getStack().stackSize;
+            maximum = storageSelection != null ? Math.min(storageSelection.stackSize, storageSelection.getMaxStackSize())
+                : aeSelection != null ? aeSelection.maximum : inventorySelection.slot.getStack().stackSize;
             quantity = Math.max(1, (maximum + 1) / 2);
             actions = QUANTITY_ACTIONS;
             sizeMenu();
@@ -300,7 +310,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
         if (action == 9 || action == 10) return;
         if (action == 12) { close(); return; }
         if (action == 11) {
-            if (aeSelection != null) {
+            if (storageSelection != null) {
+                SingleplayerStorageSplit.request(screen, storageSelection, quantity);
+            } else if (aeSelection != null) {
                 pendingAe = aeSelection;
                 requested = quantity; received = 0; awaiting = 0;
                 deadline = System.currentTimeMillis() + 3000;
@@ -323,7 +335,9 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     }
 
     private boolean enabled(int row) {
-        if (actions[row] == 5) return aeSelection != null || inventorySelection != null && inventorySelection.canSplit();
+        if (actions[row] == 5) return storageSelection != null && SingleplayerStorageSplit.available()
+            && storageSelection.stackSize > 1 && storageSelection.getMaxStackSize() > 1
+            || aeSelection != null || inventorySelection != null && inventorySelection.canSplit();
         return true;
     }
 
@@ -361,6 +375,7 @@ public final class NeiTouchMenu implements codechicken.nei.guihook.IContainerInp
     private void close() {
         gesture.cancel();
         screen = null; stack = null; panel = null; recipeSelection = null; inventorySelection = null;
+        storageSelection = null;
         holdContact = null; menuOpen = false; aeSelection = null; mouseSliding = false;
     }
 

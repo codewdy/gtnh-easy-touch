@@ -31,6 +31,7 @@ public final class EasyTouch {
     public void postInit(FMLPostInitializationEvent event) {
         if (event.getSide().isClient()) {
             TouchInput.install(config);
+            io.github.wdy.easytouch.nei.SingleplayerStorageSplit.install();
             io.github.wdy.easytouch.map.SafeMapTeleport.install();
             io.github.wdy.easytouch.text.NativeTextInput.install(config);
         }
