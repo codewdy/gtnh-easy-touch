@@ -26,8 +26,8 @@ import org.lwjgl.opengl.GL11;
 public final class DockedTooltips {
     private static DockedTooltips instance;
     private static TouchConfig config;
-    private static boolean hidden() { return config != null && config.hideTooltips; }
-    static boolean enabled() { return config != null && config.optimizeTooltip; }
+    private static boolean hidden() { return TouchInput.isActive() && config != null && config.hideTooltips; }
+    static boolean enabled() { return TouchInput.isActive() && config != null && config.optimizeTooltip; }
     private static Predicate<TouchSample> menuPriority = sample -> false;
     static void setMenuPriority(Predicate<TouchSample> priority) { menuPriority = priority; }
     private final NativeTooltipViewport viewport = new NativeTooltipViewport();

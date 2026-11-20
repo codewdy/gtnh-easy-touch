@@ -201,7 +201,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
 
     @Override
     public List<String> handleTooltip(GuiContainer gui, int x, int y, List<String> tips) {
-        if (gui != buttonTree) return tips;
+        if (!io.github.wdy.easytouch.touch.TouchInput.isActive() || gui != buttonTree) return tips;
         if (quantityButtons.contains(gui, x, y)) {
             tips.clear();
             return tips;
