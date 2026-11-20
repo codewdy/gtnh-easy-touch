@@ -67,12 +67,20 @@ public final class ClientInput {
     public static void installNeiCrafting() {
         if (!Loader.isModLoaded("NotEnoughItems")) return;
         try {
-            io.github.wdy.easytouch.nei.NeiTouchMenu.install();
             NeiCraftingTreeInput.install();
-            io.github.wdy.easytouch.nei.WorldUsageHotkey.install();
         } catch (RuntimeException | LinkageError error) {
             // Loading the optional adapter itself can fail before its install() body is entered.
             FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] Cannot load NEI crafting tree controls.");
+        }
+    }
+
+    public static void installNeiTouch() {
+        if (!Loader.isModLoaded("NotEnoughItems")) return;
+        try {
+            io.github.wdy.easytouch.nei.NeiTouchMenu.install();
+            io.github.wdy.easytouch.nei.WorldUsageHotkey.install();
+        } catch (RuntimeException | LinkageError error) {
+            FMLLog.log(Level.WARN, error, "[GTNH Easy Touch] Cannot load NEI touch controls.");
         }
     }
 

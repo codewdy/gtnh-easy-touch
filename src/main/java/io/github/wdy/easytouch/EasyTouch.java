@@ -30,6 +30,7 @@ public final class EasyTouch {
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         if (event.getSide().isClient()) {
+            ClientInput.installNeiCrafting();
             TouchInput.install(config);
             io.github.wdy.easytouch.nei.SingleplayerStorageSplit.install();
             io.github.wdy.easytouch.map.SafeMapTeleport.install();

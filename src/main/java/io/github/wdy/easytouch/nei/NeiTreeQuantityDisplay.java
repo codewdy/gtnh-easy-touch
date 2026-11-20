@@ -159,7 +159,7 @@ final class NeiTreeQuantityDisplay implements IContainerDrawHandler, IContainerT
     @Override
     public List<String> handleItemTooltip(GuiContainer gui, ItemStack stack, int mouseX, int mouseY,
             List<String> tips) {
-        if (!io.github.wdy.easytouch.touch.TouchInput.isActive() || failed || !(gui instanceof GuiCraftingTree)) return tips;
+        if (failed || !(gui instanceof GuiCraftingTree)) return tips;
         try {
             GuiCraftingTree tree = (GuiCraftingTree) gui;
             if (!updateInventory(tree)) return tips;

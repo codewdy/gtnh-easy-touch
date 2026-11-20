@@ -190,9 +190,9 @@ public final class TouchInput {
     private void dispatchPending() {
         java.util.List<TouchSample> pending = queue.drain();
         if (!active && queue.nativeTouchSeen() && "ready".equals(status)) {
-            // Install every gameplay/UI hook only on the client thread, before forwarding the first touch.
+            // Install touch gameplay/UI hooks only on the client thread, before forwarding the first touch.
             ClientInput.install(config);
-            ClientInput.installNeiCrafting();
+            ClientInput.installNeiTouch();
             active = true;
             LOG.info("[Touch] First native touch detected; Easy Touch enabled for this session.");
         }

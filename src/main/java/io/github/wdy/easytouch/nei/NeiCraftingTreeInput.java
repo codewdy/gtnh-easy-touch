@@ -91,7 +91,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
             MinecraftForge.EVENT_BUS.register(input);
             MinecraftForge.EVENT_BUS.register(input.quantityButtons);
             FMLCommonHandler.instance().bus().register(input);
-            // The first touch may arrive while a crafting tree is already open.
+            // Also support registration while a crafting tree is already open.
             GuiScreen screen = Minecraft.getMinecraft().currentScreen;
             if (screen instanceof GuiCraftingTree) {
                 List buttons = cpw.mods.fml.relauncher.ReflectionHelper.getPrivateValue(
@@ -201,7 +201,7 @@ public final class NeiCraftingTreeInput implements IContainerInputHandler, ICont
 
     @Override
     public List<String> handleTooltip(GuiContainer gui, int x, int y, List<String> tips) {
-        if (!io.github.wdy.easytouch.touch.TouchInput.isActive() || gui != buttonTree) return tips;
+        if (gui != buttonTree) return tips;
         if (quantityButtons.contains(gui, x, y)) {
             tips.clear();
             return tips;
