@@ -52,6 +52,7 @@ public final class LayoutEditor extends GuiScreen {
             name = new GuiTextField(fontRendererObj, x, y, 290, 20); name.setMaxStringLength(40); name.setText(b.label);
             button(10, x, y+26, 290, b.mode == 3 ? "配置子选项 (" + b.options.size() + ")" : "映射: " + target(b));
             if (option >= 0) button(34, x, y+146, 290, "删除此子选项");
+            if (option < 0 && b.mode == 1) button(35, x, y+146, 290, "可拖动视角（世界）: " + (b.dragLook ? "开" : "关"));
             button(11, x, y+50, 290, "触发: " + (b.mode == 7 ? "自动攻击" : b.mode == 6 ? "切换连发" : b.mode == 5 ? "旅行地图传送" : b.mode == 3 ? "弹出菜单" : b.mode == 2 ? "点击切换" : "按住触发"));
             button(12, x, y+74, 142, "世界: " + (b.world ? "显示" : "隐藏"));
             button(13, x+148, y+74, 142, "其他: " + (b.other ? "显示" : "隐藏"));
@@ -152,6 +153,7 @@ public final class LayoutEditor extends GuiScreen {
             case 31: b.options.add(new TouchLayout.Button()); option=b.options.size()-1; path.add(option); screen=1; break;
             case 32: optionPage=Math.max(0,optionPage-1); break;
             case 33: optionPage++; break;
+            case 35: b.dragLook = !b.dragLook; break;
             case 34: int removed=path.remove(path.size()-1); current().options.remove(removed); option=path.isEmpty() ? -1 : path.get(path.size()-1); optionPage=0; screen=3; break;
             default:
                 if (btn.id >= 2000 && screen == 3) { option=btn.id-2000; path.add(option); screen=1; }

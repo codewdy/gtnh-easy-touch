@@ -9,6 +9,7 @@ public final class ClickGesture {
         void button(int button, boolean down);
         default int tapButton() { return -1; }
         default int holdButton() { return 0; }
+        default long holdNanos() { return TouchTiming.HOLD_NS; }
     }
     public static final long DOUBLE_NS = 250_000_000L;
     private final Port port;
@@ -19,6 +20,12 @@ public final class ClickGesture {
     private boolean held, moved;
 
     public ClickGesture(Port port, boolean relative) { this.port = port; this.relative = relative; }
+    /** Read-only HUD progress; never advances or fires the input state machine. */
+    public float holdProgress(long now) {
+        if (down == null || moved) return -1;
+        if (held) return 1;
+        return Math.max(0, Math.min(1, (float)(now-down.timestamp)/port.holdNanos()));
+    }
     public boolean held() { return held; }
     public boolean active() { return down != null; }
     public boolean awaitingSecond() { return pending != null; }
@@ -39,7 +46,7 @@ public final class ClickGesture {
     public void cancel() { release(); down = pending = null; moved = false; }
     public void tick(long now) {
         if (pending != null && now-pending.timestamp >= DOUBLE_NS) flush();
-        if (down != null && !held && !moved && now-down.timestamp >= TouchTiming.HOLD_NS) {
+        if (down != null && !held && !moved && now-down.timestamp >= port.holdNanos()) {
             button = port.holdButton();
             press();
         }

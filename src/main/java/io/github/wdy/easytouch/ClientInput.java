@@ -40,7 +40,8 @@ public final class ClientInput {
 
     private ClientInput(TouchConfig config) {
         this.config = config;
-        new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); });
+        new io.github.wdy.easytouch.layout.TouchButtons(config, keys.newSource(), () -> { cancelInputs(); keys.sync(input.inWorld()); },
+            (dx, dy) -> input.turn(dx * config.touchDragSensitivityX, dy * config.touchDragSensitivityY));
         final TouchActions actions = new TouchActions(touchKeys);
         touchLook = new TouchLook(new TouchLook.Port() {
             public boolean inWorld() { return input.inWorld(); }
@@ -174,6 +175,19 @@ public final class ClientInput {
         }
     }
 
+
+    @SubscribeEvent
+    public void holdProgress(RenderGameOverlayEvent.Post event) {
+        if (event.type != RenderGameOverlayEvent.ElementType.CROSSHAIRS || !config.touchEnabled
+                || !input.inWorld() || input.mc.gameSettings.hideGUI) return;
+        float progress = touchLook.holdProgress(TouchInput.nanoTime());
+        if (progress < 0) return;
+        int size = 22, x = event.resolution.getScaledWidth()/2-size/2;
+        int y = event.resolution.getScaledHeight()/2-size/2;
+        io.github.wdy.easytouch.layout.Circle.ring(x,y,size,0x90202730);
+        io.github.wdy.easytouch.layout.Circle.progressRing(x,y,size,
+            touchLook.held() ? 0xE072DFB5 : 0xE0ECF4FA,progress);
+    }
 
     @SubscribeEvent
     public void wheel(RenderGameOverlayEvent.Post event) {

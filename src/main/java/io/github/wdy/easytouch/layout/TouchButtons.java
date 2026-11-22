@@ -28,6 +28,8 @@ public final class TouchButtons {
     private final GlobalTouchMenu menu;
     private final MappingMenu mappingMenu;
     private final Runnable reset;
+    private final java.util.function.BiConsumer<Float, Float> turn;
+    private final Map<String, TouchSample> dragContacts = new HashMap<String, TouchSample>();
     private final Minecraft mc = Minecraft.getMinecraft();
     private final KeyStateMerger.Source source;
     private final VirtualKeyboard keyboard = new VirtualKeyboard();
@@ -41,7 +43,8 @@ public final class TouchButtons {
     private boolean configRequested;
     public String loadError;
 
-    public TouchButtons(TouchConfig config, KeyStateMerger.Source source, Runnable resetInputs) {
+    public TouchButtons(TouchConfig config, KeyStateMerger.Source source, Runnable resetInputs, java.util.function.BiConsumer<Float, Float> turn) {
+        this.turn = turn;
         this.config = config;
         this.file = config.layoutFile; this.enabled = config.touchEnabled; this.source = source;
         chords = new ChordState((code, down) -> {
@@ -119,8 +122,14 @@ public final class TouchButtons {
         String id = s.deviceId + ":" + s.fingerId;
         TouchLayout.Button b = contacts.get(id);
         if (b != null) {
+            TouchSample previous = dragContacts.get(id);
+            if (previous != null && s.kind == TouchSample.Kind.MOVE) {
+                dragContacts.put(id, s);
+                if (mc.currentScreen == null) turn.accept(s.x-previous.x, s.y-previous.y);
+            }
             if (s.kind == TouchSample.Kind.UP || s.kind == TouchSample.Kind.CANCEL) {
                 contacts.remove(id);
+                dragContacts.remove(id);
                 if ((b.mode == 3 || b.mode == 5) && s.kind == TouchSample.Kind.UP
                         && b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) {
                     reset.run();
@@ -138,6 +147,7 @@ public final class TouchButtons {
             b = layout.buttons.get(i);
             if (!visible(b) || !b.hit((int)(s.x*r.getScaledWidth()), (int)(s.y*r.getScaledHeight()), r.getScaledWidth(), r.getScaledHeight())) continue;
             contacts.put(id, b);
+            if (b.mode == 1 && b.dragLook && mc.currentScreen == null) dragContacts.put(id, s);
             if (b.mode == 3 || b.mode == 5) return true;
             if (b.mode == 7) { io.github.wdy.easytouch.input.AutoAttack.toggle(); return true; }
             if (b.mode == 6) { toggleRepeat(b); return true; }
@@ -194,7 +204,7 @@ public final class TouchButtons {
             KeyBinding.setKeyBindState(code, mc.currentScreen == null && Display.isActive() && (code < 0 ? TouchInput.mouseButtonDown(code+100) : VirtualKeyboard.physicalDown(code)));
             for (KeyBinding binding : mc.gameSettings.keyBindings) if (binding.getKeyCode() == code) while (binding.isPressed()) { }
         }
-        chords.clear(); repeating.clear(); held.clear(); contacts.clear(); source.clear();
+        chords.clear(); repeating.clear(); held.clear(); contacts.clear(); dragContacts.clear(); source.clear();
     }
     public void draw(int w, int h) {
         sizeMenus(w,h);

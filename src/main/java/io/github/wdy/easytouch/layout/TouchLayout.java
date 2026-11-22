@@ -21,6 +21,7 @@ public final class TouchLayout {
         public List<Integer> keys = new ArrayList<Integer>();
         public List<Button> options = new ArrayList<Button>();
         public boolean world = true, other = false;
+        public boolean dragLook = false;
         public boolean smartSecondary = false;
         public float x = .8f, y = .6f;
         public int left(int w) { return Math.round(x * Math.max(0, w - size)); }

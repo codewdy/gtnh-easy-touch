@@ -31,9 +31,12 @@ public final class Circle {
         GL11.glColor4f((color>>16&255)/255f,(color>>8&255)/255f,(color&255)/255f,(color>>>24)/255f*coverage);
     }
     private static void band(double cx,double cy,double inner,double outer,int steps,int color,float inside,float outside) {
+        band(cx,cy,inner,outer,steps,color,inside,outside,0,Math.PI*2);
+    }
+    private static void band(double cx,double cy,double inner,double outer,int steps,int color,float inside,float outside,double start,double sweep) {
         GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
         for(int i=0;i<=steps;i++) {
-            double angle=i*Math.PI*2/steps, dx=Math.cos(angle),dy=Math.sin(angle);
+            double angle=start+i*sweep/steps, dx=Math.cos(angle),dy=Math.sin(angle);
             color(color,inside); GL11.glVertex2d(cx+dx*inner,cy+dy*inner);
             color(color,outside); GL11.glVertex2d(cx+dx*outer,cy+dy*outer);
         }
@@ -65,6 +68,20 @@ public final class Circle {
             band(x+r,y+r,inner,inner+fringe,steps,color,0,1);
             band(x+r,y+r,inner+fringe,r-fringe,steps,color,1,1);
             band(x+r,y+r,r-fringe,r,steps,color,1,0);
+        } finally { GL11.glPopAttrib(); }
+    }
+    /** Thin progress arc, starting at twelve o'clock and filling clockwise. */
+    public static void progressRing(int x,int y,int size,int color,float progress) {
+        if(size<=0 || progress<=0)return;
+        progress=Math.min(1,progress);
+        int scale=scale(),steps=Math.max(1,(int)Math.ceil(segments(size/2.0,scale)*progress));
+        double r=size/2.0,inner=Math.max(0,r-1.2),fringe=Math.min((r-inner)/2,.85/scale);
+        double start=-Math.PI/2,sweep=Math.PI*2*progress;
+        begin();
+        try {
+            band(x+r,y+r,inner,inner+fringe,steps,color,0,1,start,sweep);
+            band(x+r,y+r,inner+fringe,r-fringe,steps,color,1,1,start,sweep);
+            band(x+r,y+r,r-fringe,r,steps,color,1,0,start,sweep);
         } finally { GL11.glPopAttrib(); }
     }
     public static void button(int x,int y,int size,int fill,boolean active,boolean selected) {
