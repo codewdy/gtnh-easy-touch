@@ -18,21 +18,20 @@ public final class AutoTool {
         Block block = mc.theWorld.getBlock(hit.blockX, hit.blockY, hit.blockZ);
         if (block.isAir(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ)
                 || block.getBlockHardness(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ) <= 0) return;
+        int metadata = mc.theWorld.getBlockMetadata(hit.blockX, hit.blockY, hit.blockZ);
+        if (block.canHarvestBlock(mc.thePlayer, metadata)) return;
         int original = mc.thePlayer.inventory.currentItem;
         int best = original;
         try {
-            boolean harvest = block.canHarvestBlock(mc.thePlayer, mc.theWorld.getBlockMetadata(hit.blockX, hit.blockY, hit.blockZ));
-            float speed = block.getPlayerRelativeBlockHardness(mc.thePlayer, mc.theWorld, hit.blockX, hit.blockY, hit.blockZ);
+            float speed = 0;
             for (int slot = 0; slot < 9; slot++) {
                 ItemStack stack = mc.thePlayer.inventory.getStackInSlot(slot);
                 if (slot == original || stack == null || stack.stackSize <= 0) continue;
                 mc.thePlayer.inventory.currentItem = slot;
-                boolean candidateHarvest = block.canHarvestBlock(mc.thePlayer, mc.theWorld.getBlockMetadata(hit.blockX, hit.blockY, hit.blockZ));
+                if (!block.canHarvestBlock(mc.thePlayer, metadata)) continue;
                 float candidateSpeed = block.getPlayerRelativeBlockHardness(mc.thePlayer, mc.theWorld, hit.blockX, hit.blockY, hit.blockZ);
-                if (candidateSpeed > 0 && ((!harvest && candidateHarvest)
-                        || (harvest == candidateHarvest && candidateSpeed > speed + 0.000001F))) {
+                if (candidateSpeed > 0 && (best == original || candidateSpeed > speed + 0.000001F)) {
                     best = slot;
-                    harvest = candidateHarvest;
                     speed = candidateSpeed;
                 }
             }
