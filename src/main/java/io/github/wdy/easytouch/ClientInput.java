@@ -55,6 +55,7 @@ public final class ClientInput {
                     io.github.wdy.easytouch.input.AutoTool.select(input.mc);
                 actions.button(button, down);
             }
+            public Object miningTarget() { return io.github.wdy.easytouch.input.WorldHold.target(input.mc); }
             public long holdNanos() { return io.github.wdy.easytouch.input.WorldHold.delay(input.mc, config.autoTool); }
             public boolean holdingUseItem() { return io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer == null ? null : input.mc.thePlayer.getHeldItem()); }
         });
@@ -181,14 +182,25 @@ public final class ClientInput {
                 || !input.inWorld() || input.mc.gameSettings.hideGUI) return;
         float progress = touchLook.holdProgress(TouchInput.nanoTime());
         if (progress < 0) return;
+        boolean hasTarget = io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer.getHeldItem())
+            || io.github.wdy.easytouch.input.WorldHold.target(input.mc) != null;
         int size = 22, x = event.resolution.getScaledWidth()/2-size/2;
         int y = event.resolution.getScaledHeight()/2-size/2;
-        io.github.wdy.easytouch.layout.Circle.ring(x,y,size,0x90202730);
-        io.github.wdy.easytouch.layout.Circle.progressRing(x,y,size,
+        io.github.wdy.easytouch.layout.Circle.ring(x,y,size,hasTarget ? 0x90202730 : 0x706F7780);
+        if (hasTarget) io.github.wdy.easytouch.layout.Circle.progressRing(x,y,size,
             0xE0ECF4FA,progress);
-        int slot = io.github.wdy.easytouch.input.WorldHold.slot(input.mc, config.autoTool);
+        int slot = hasTarget ? io.github.wdy.easytouch.input.WorldHold.slot(input.mc, config.autoTool) : -1;
         net.minecraft.item.ItemStack stack = slot < 0 ? null : input.mc.thePlayer.inventory.getStackInSlot(slot);
-        if (stack != null) {
+        if (!hasTarget) {
+            // Draw the invalid-target cross inside the same 16x16 area as item previews.
+            int iconX = x + size + 4, iconY = y + 3;
+            for (int i = 3; i < 13; i++) {
+                net.minecraft.client.gui.Gui.drawRect(iconX + i, iconY + i,
+                    iconX + i + 2, iconY + i + 2, 0xE0FF5555);
+                net.minecraft.client.gui.Gui.drawRect(iconX + 15 - i, iconY + i,
+                    iconX + 17 - i, iconY + i + 2, 0xE0FF5555);
+            }
+        } else if (stack != null) {
             org.lwjgl.opengl.GL11.glPushAttrib(org.lwjgl.opengl.GL11.GL_ALL_ATTRIB_BITS);
             org.lwjgl.opengl.GL11.glPushMatrix();
             try {

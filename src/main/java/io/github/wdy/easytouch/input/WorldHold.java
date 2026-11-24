@@ -8,6 +8,19 @@ import net.minecraft.util.MovingObjectPosition;
 public final class WorldHold {
     private WorldHold() { }
 
+    public static Object target(Minecraft mc) {
+        if (mc.theWorld == null) return null;
+        MovingObjectPosition hit = mc.objectMouseOver;
+        if (hit == null || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK) return null;
+        net.minecraft.block.Block block = mc.theWorld.getBlock(hit.blockX, hit.blockY, hit.blockZ);
+        if (block.isAir(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ)
+                || block.getBlockHardness(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ) < 0) return null;
+        // Face changes on the same block do not restart the hold timer.
+        return hit.blockX + ":" + hit.blockY + ":" + hit.blockZ + ":"
+            + net.minecraft.block.Block.getIdFromBlock(block) + ":"
+            + mc.theWorld.getBlockMetadata(hit.blockX, hit.blockY, hit.blockZ);
+    }
+
     public static int slot(Minecraft mc, boolean autoTool) {
         if (mc.thePlayer == null) return -1;
         return autoTool && !HeldItemUse.matches(mc.thePlayer.getHeldItem())

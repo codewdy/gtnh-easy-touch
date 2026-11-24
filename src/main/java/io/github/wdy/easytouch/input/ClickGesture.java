@@ -10,6 +10,7 @@ public final class ClickGesture {
         default int tapButton() { return -1; }
         default long tapNanos() { return Long.MAX_VALUE; }
         default int holdButton() { return 0; }
+        default boolean holdReady(long now) { return true; }
         default long holdNanos() { return TouchTiming.HOLD_NS; }
     }
     public static final long DOUBLE_NS = 250_000_000L;
@@ -19,15 +20,17 @@ public final class ClickGesture {
     private int width = 1, height = 1, button, tapButton;
     private float x, y;
     private boolean held, moved;
+    private long holdStarted;
 
     public ClickGesture(Port port, boolean relative) { this.port = port; this.relative = relative; }
     /** Read-only HUD progress; never advances or fires the input state machine. */
     public float holdProgress(long now) {
         if (down == null || moved) return -1;
         if (held) return 1;
-        return Math.max(0, Math.min(1, (float)(now-down.timestamp)/port.holdNanos()));
+        return Math.max(0, Math.min(1, (float)(now-holdStarted)/port.holdNanos()));
     }
-    public long holdElapsed(long now) { return down == null ? -1 : now - down.timestamp; }
+    public long holdElapsed(long now) { return down == null ? -1 : now - holdStarted; }
+    public void restartHold(long now) { if (down != null && !held) holdStarted = now; }
     public boolean held() { return held; }
     public boolean heldButton(int expected) { return held && button == expected; }
     public boolean active() { return down != null; }
@@ -49,7 +52,7 @@ public final class ClickGesture {
     public void cancel() { release(); down = pending = null; moved = false; }
     public void tick(long now) {
         if (pending != null && now-pending.timestamp >= DOUBLE_NS) flush();
-        if (down != null && !held && !moved && now-down.timestamp >= port.holdNanos()) {
+        if (down != null && !held && !moved && port.holdReady(now) && now-holdStarted >= port.holdNanos()) {
             button = port.holdButton();
             press();
         }
@@ -63,6 +66,7 @@ public final class ClickGesture {
             tick(s.timestamp);
             boolean twice = pending != null && s.deviceId == pending.deviceId && near(s,pending);
             if (!twice) flush(); else pending = null;
+            holdStarted = s.timestamp;
             down = s; x = s.x; y = s.y; moved = false; button = twice ? 1 : 0;
             tapButton = port.tapButton();
             if (!relative) port.move(x,y,0,0);
@@ -71,6 +75,8 @@ public final class ClickGesture {
         if (down == null || s.deviceId != down.deviceId || s.fingerId != down.fingerId) return;
         if (s.kind == TouchSample.Kind.CANCEL) { cancel(); return; }
         if (s.kind != TouchSample.Kind.MOVE && s.kind != TouchSample.Kind.UP) return;
+        // World look movement must cancel preparation before the deadline can fire.
+        if (relative && !near(s,down)) moved = true;
         tick(s.timestamp);
         if (!near(s,down)) {
             if (!moved && !relative && !held) press();
