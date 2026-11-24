@@ -10,34 +10,42 @@ public final class AutoTool {
     private AutoTool() {}
 
     public static void select(Minecraft mc) {
+        int slot = bestSlot(mc);
+        if (slot >= 0) mc.thePlayer.inventory.currentItem = slot;
+    }
+
+    public static int bestSlot(Minecraft mc) {
+        int current = mc.thePlayer == null ? -1 : mc.thePlayer.inventory.currentItem;
         if (mc.thePlayer == null || mc.theWorld == null || mc.currentScreen != null
                 || !mc.inGameHasFocus || mc.playerController.isInCreativeMode()
-                || mc.thePlayer.isUsingItem()) return;
+                || mc.thePlayer.isUsingItem()) return current;
         MovingObjectPosition hit = mc.objectMouseOver;
-        if (hit == null || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK) return;
+        if (hit == null || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK) return current;
         Block block = mc.theWorld.getBlock(hit.blockX, hit.blockY, hit.blockZ);
         if (block.isAir(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ)
-                || block.getBlockHardness(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ) <= 0) return;
+                || block.getBlockHardness(mc.theWorld, hit.blockX, hit.blockY, hit.blockZ) <= 0) return current;
         int metadata = mc.theWorld.getBlockMetadata(hit.blockX, hit.blockY, hit.blockZ);
-        if (block.canHarvestBlock(mc.thePlayer, metadata)) return;
         int original = mc.thePlayer.inventory.currentItem;
         int best = original;
         try {
-            float speed = 0;
+            boolean harvest = block.canHarvestBlock(mc.thePlayer, metadata);
+            float speed = block.getPlayerRelativeBlockHardness(mc.thePlayer, mc.theWorld, hit.blockX, hit.blockY, hit.blockZ);
             for (int slot = 0; slot < 9; slot++) {
                 ItemStack stack = mc.thePlayer.inventory.getStackInSlot(slot);
                 if (slot == original || stack == null || stack.stackSize <= 0) continue;
                 mc.thePlayer.inventory.currentItem = slot;
-                if (!block.canHarvestBlock(mc.thePlayer, metadata)) continue;
+                boolean candidateHarvest = block.canHarvestBlock(mc.thePlayer, metadata);
                 float candidateSpeed = block.getPlayerRelativeBlockHardness(mc.thePlayer, mc.theWorld, hit.blockX, hit.blockY, hit.blockZ);
-                if (candidateSpeed > 0 && (best == original || candidateSpeed > speed + 0.000001F)) {
+                if (candidateSpeed > 0 && ((!harvest && candidateHarvest)
+                        || (harvest == candidateHarvest && candidateSpeed > speed + 0.000001F))) {
                     best = slot;
+                    harvest = candidateHarvest;
                     speed = candidateSpeed;
                 }
             }
         } finally {
             mc.thePlayer.inventory.currentItem = original;
         }
-        mc.thePlayer.inventory.currentItem = best;
+        return best;
     }
 }

@@ -29,7 +29,7 @@ public final class TouchConfig {
         autoStep = file.getBoolean("autoStep", "movement", false,
             "Choose step height from upcoming collision surfaces, up to 1.25 blocks on land and in water, with clear rise and landing space. Water stepping follows vanilla support/collision rules and allows swimming up. Sneaking pauses auto step. Applies to keyboard and touch movement.");
         autoTool = file.getBoolean("autoTool", "mining", true,
-            "Switch hotbar tools only when the held item cannot harvest the target block. Choose the fastest capable tool; keep the current slot if none can harvest.");
+            "Automatically select a hotbar tool only during world touch hold mining. Prefer harvest capability, then mining speed. Direct attack key mappings do not trigger selection.");
         io.github.wdy.easytouch.mining.EzMinerAutoVein.enabled = file.getBoolean("ezMinerAutoGtVein", "mining", true,
             "In EZMiner basic chain mode, use GT vein blast search for GT large ore targets. Applies to preview and harvesting; other modes stay manual.");
         touchEnabled = file.getBoolean("enabled", "touch", true,

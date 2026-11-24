@@ -6,8 +6,10 @@ public final class TouchLook {
         boolean inWorld(); int width(); int height();
         void turn(float dx,float dy);
         void button(int button,boolean down);
+        default long holdNanos() { return 300_000_000L; }
         default boolean holdingUseItem() { return false; }
     }
+    private static final long PREVIEW_NS = 150_000_000L;
     private final Port port;
     private final ClickGesture gesture;
     public TouchLook(Port port) {
@@ -16,16 +18,18 @@ public final class TouchLook {
             public void move(float x,float y,float dx,float dy) { port.turn(dx,dy); }
             public void button(int b,boolean down) { port.button(b,down); }
             public int holdButton() { return port.holdingUseItem() ? 1 : 0; }
-            public long holdNanos() { return 300_000_000L; }
+            public long holdNanos() { return port.holdNanos(); }
             public int tapButton() { return 1; }
+            public long tapNanos() { return PREVIEW_NS; }
         },true);
     }
     public float holdProgress(long now) {
-        if (!port.inWorld()) return -1;
+        if (!port.inWorld() || gesture.held()) return -1;
         float progress = gesture.holdProgress(now);
-        return progress > .5f ? progress : -1;
+        return gesture.holdElapsed(now) >= PREVIEW_NS ? progress : -1;
     }
     public boolean held() { return gesture.held(); }
+    public boolean mining() { return gesture.heldButton(0); }
     public void cancel() { gesture.cancel(); }
     public void tick(long now) { if (!port.inWorld()) cancel(); else gesture.tick(now); }
     public void accept(TouchSample s) {

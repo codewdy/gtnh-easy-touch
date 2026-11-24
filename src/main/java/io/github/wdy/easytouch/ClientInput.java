@@ -50,7 +50,12 @@ public final class ClientInput {
             public void turn(float dx, float dy) {
                 input.turn(dx * config.touchDragSensitivityX, dy * config.touchDragSensitivityY);
             }
-            public void button(int button, boolean down) { actions.button(button, down); }
+            public void button(int button, boolean down) {
+                if (button == 0 && down && config.autoTool && input.inWorld())
+                    io.github.wdy.easytouch.input.AutoTool.select(input.mc);
+                actions.button(button, down);
+            }
+            public long holdNanos() { return io.github.wdy.easytouch.input.WorldHold.delay(input.mc, config.autoTool); }
             public boolean holdingUseItem() { return io.github.wdy.easytouch.input.HeldItemUse.matches(input.mc.thePlayer == null ? null : input.mc.thePlayer.getHeldItem()); }
         });
     }
@@ -115,12 +120,6 @@ public final class ClientInput {
         io.github.wdy.easytouch.layout.TouchButtons.instance.syncKeyboard();
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void beforeMouse(net.minecraftforge.client.event.MouseEvent event) {
-        if (config.autoTool && event.button == 0 && event.buttonstate && input.inWorld())
-            io.github.wdy.easytouch.input.AutoTool.select(input.mc);
-    }
-
     @SubscribeEvent
     public void syncMouse(InputEvent.MouseInputEvent event) {
         // Vanilla has already processed this real mouse event. Preserve any independent touch hold.
@@ -152,7 +151,7 @@ public final class ClientInput {
             autoAttack.tick(input.mc, input.inWorld());
             touchLook.tick(TouchInput.nanoTime());
             keys.sync(input.inWorld());
-            if (config.autoTool && input.inWorld() && input.mc.gameSettings.keyBindAttack.getIsKeyPressed())
+            if (config.autoTool && input.inWorld() && touchLook.mining())
                 io.github.wdy.easytouch.input.AutoTool.select(input.mc);
         }
         keys.sync(input.inWorld());
@@ -186,7 +185,21 @@ public final class ClientInput {
         int y = event.resolution.getScaledHeight()/2-size/2;
         io.github.wdy.easytouch.layout.Circle.ring(x,y,size,0x90202730);
         io.github.wdy.easytouch.layout.Circle.progressRing(x,y,size,
-            touchLook.held() ? 0xE072DFB5 : 0xE0ECF4FA,progress);
+            0xE0ECF4FA,progress);
+        int slot = io.github.wdy.easytouch.input.WorldHold.slot(input.mc, config.autoTool);
+        net.minecraft.item.ItemStack stack = slot < 0 ? null : input.mc.thePlayer.inventory.getStackInSlot(slot);
+        if (stack != null) {
+            org.lwjgl.opengl.GL11.glPushAttrib(org.lwjgl.opengl.GL11.GL_ALL_ATTRIB_BITS);
+            org.lwjgl.opengl.GL11.glPushMatrix();
+            try {
+                net.minecraft.client.renderer.RenderHelper.enableGUIStandardItemLighting();
+                new net.minecraft.client.renderer.entity.RenderItem().renderItemAndEffectIntoGUI(
+                    input.mc.fontRenderer, input.mc.getTextureManager(), stack, x + size + 4, y + 3);
+            } finally {
+                org.lwjgl.opengl.GL11.glPopMatrix();
+                org.lwjgl.opengl.GL11.glPopAttrib();
+            }
+        }
     }
 
     @SubscribeEvent

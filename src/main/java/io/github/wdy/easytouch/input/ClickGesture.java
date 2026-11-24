@@ -8,6 +8,7 @@ public final class ClickGesture {
         void move(float x, float y, float dx, float dy);
         void button(int button, boolean down);
         default int tapButton() { return -1; }
+        default long tapNanos() { return Long.MAX_VALUE; }
         default int holdButton() { return 0; }
         default long holdNanos() { return TouchTiming.HOLD_NS; }
     }
@@ -26,7 +27,9 @@ public final class ClickGesture {
         if (held) return 1;
         return Math.max(0, Math.min(1, (float)(now-down.timestamp)/port.holdNanos()));
     }
+    public long holdElapsed(long now) { return down == null ? -1 : now - down.timestamp; }
     public boolean held() { return held; }
+    public boolean heldButton(int expected) { return held && button == expected; }
     public boolean active() { return down != null; }
     public boolean awaitingSecond() { return pending != null; }
     private boolean near(TouchSample a, TouchSample b) {
@@ -76,7 +79,7 @@ public final class ClickGesture {
         if (moved) port.move(s.x,s.y,s.x-x,s.y-y);
         x = s.x; y = s.y;
         if (s.kind == TouchSample.Kind.UP) {
-            if (!held && !moved) {
+            if (!held && !moved && s.timestamp - down.timestamp < port.tapNanos()) {
                 if (tapButton >= 0) { port.button(tapButton,true); port.button(tapButton,false); }
                 else if (button == 1) { port.button(1,true); port.button(1,false); }
                 else pending = s;
