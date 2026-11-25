@@ -51,6 +51,11 @@ public final class ClientInput {
                 input.turn(dx * config.touchDragSensitivityX, dy * config.touchDragSensitivityY);
             }
             public void button(int button, boolean down) {
+                if (button == 0) {
+                    if (down && input.inWorld() && !input.mc.playerController.isInCreativeMode())
+                        io.github.wdy.easytouch.input.SecondBlockGuard.begin();
+                    else io.github.wdy.easytouch.input.SecondBlockGuard.end();
+                }
                 if (button == 0 && down && config.autoTool && input.inWorld())
                     io.github.wdy.easytouch.input.AutoTool.select(input.mc);
                 actions.button(button, down);
@@ -92,6 +97,7 @@ public final class ClientInput {
     }
 
     private void cancelInputs() {
+        io.github.wdy.easytouch.input.SecondBlockGuard.end();
         autoStep.restore();
         touchLook.cancel();
         movement.cancel();
